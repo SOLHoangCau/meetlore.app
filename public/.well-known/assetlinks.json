@@ -1,1 +1,16 @@
-[{ "relation": ["delegate_permission/common.handle_all_urls"], "target": { "namespace": "android_app", "package_name": "app.meetlore", "sha256_cert_fingerprints": ["THAY_BANG_SHA256_CUA_KHOA_KY"] } }]
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.meetlore",
+      "sha256_cert_fingerprints": [
+        "THAY_BANG_SHA256_KHOA_KY_PLAY",
+        "THAY_BANG_SHA256_KHOA_UPLOAD"
+      ]
+    }
+  }
+]

@@ -1,0 +1,5 @@
+# Cloudflare Pages: tệp xác minh liên kết app phải trả về JSON, không chuyển hướng.
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+/.well-known/assetlinks.json
+  Content-Type: application/json
