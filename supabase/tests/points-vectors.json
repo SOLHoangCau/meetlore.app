@@ -1,0 +1,10 @@
+[
+ {"name":"ghi chép nhuộm chàm, người trong nghề được xác nhận, Hub chưa có","kind":"knowledge_note","effort":2,"r":[2,2,2,1,2],"rarity":"missing","prov":"verified","points":469},
+ {"name":"ghi chép khá, trực tiếp","kind":"knowledge_note","effort":1,"r":[2,1,2,1,1],"rarity":"common","prov":"firsthand","points":110},
+ {"name":"ghi chép đạt tối thiểu","kind":"knowledge_note","effort":0.5,"r":[1,1,1,1,1],"rarity":"common","prov":"secondary","points":38},
+ {"name":"sửa thông tin Hub bị giới hạn 0,5 giờ","kind":"hub_correction","effort":2,"r":[2,1,2,2,1],"rarity":"thin","prov":"firsthand","points":66},
+ {"name":"chạm trần mỗi bài","kind":"knowledge_note","effort":4,"r":[2,2,2,2,2],"rarity":"missing","prov":"verified","points":600},
+ {"name":"sai thông tin thì từ chối","kind":"knowledge_note","effort":2,"r":[0,2,2,2,2],"rarity":"common","prov":"firsthand","points":null},
+ {"name":"không rõ nguồn hoặc đồng ý thì từ chối","kind":"source_material","effort":1,"r":[2,2,2,2,0],"rarity":"common","prov":"firsthand","points":null},
+ {"name":"tổng dưới 5 thì từ chối","kind":"knowledge_note","effort":1,"r":[1,1,1,0,1],"rarity":"common","prov":"secondary","points":null}
+]

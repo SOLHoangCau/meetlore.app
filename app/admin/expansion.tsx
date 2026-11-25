@@ -1,0 +1,4 @@
+import { CANDIDATES, DESTINATIONS } from '../../src/data/catalog';
+import { useApp } from '../../src/lib/store';
+import { Card, Gap, H2, P, Row, Screen, Small, Tag } from '../../src/ui';
+export default function E() { const { t, s } = useApp(); return <Screen back title={t('adExpand')}>{s.hubRequests.length > 0 && <Card><H2>{t('reqTitle')}</H2>{s.hubRequests.map((x, i) => <P key={i}>{x.place} · {x.role}</P>)}</Card>}{DESTINATIONS.map((d) => <Card key={d[0]}><Row style={{ justifyContent: 'space-between' }}><H2 style={{ flex: 1 }}>{d[2]}</H2><Tag label={t('adWave', { n: d[5] })} /></Row><P muted>{d[6]}</P>{d[8] !== null && <Small>{d[7]}M / {d[8]}M · {d[9]}</Small>}<Gap h={4} />{CANDIDATES.filter((c) => c[0] === d[0]).map((c) => <Small key={c[1]}>• {c[1]} · {t('adPri')}</Small>)}</Card>)}</Screen>; }

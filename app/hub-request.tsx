@@ -1,0 +1,5 @@
+import { useState } from 'react';
+import { useApp } from '../src/lib/store';
+import { Banner, Btn, Check, Chip, Field, Gap, Screen, Small, Wrap } from '../src/ui';
+export default function Req() { const { t, a } = useApp(); const [x, set] = useState({ p: '', r: 'traveler', h: false }); const [d, setD] = useState(false);
+  return <Screen back title={t('reqTitle')}>{d ? <Banner tone="moss" title={t('reqDone')} /> : <><Field label={t('reqPlace')} value={x.p} onChangeText={(v) => set({ ...x, p: v })} /><Small style={{ marginBottom: 6 }}>{t('reqRole')}</Small><Wrap style={{ marginBottom: 8 }}><Chip label={t('roleLocal')} on={x.r === 'local'} onPress={() => set({ ...x, r: 'local' })} /><Chip label={t('roleTraveler')} on={x.r === 'traveler'} onPress={() => set({ ...x, r: 'traveler' })} /></Wrap><Check label={t('reqHost')} on={x.h} onPress={() => set({ ...x, h: !x.h })} /><Gap h={8} /><Btn label={t('send')} disabled={x.p.trim().length < 2} onPress={() => { a.requestHub(x.p, x.r, x.h); setD(true); }} /></>}</Screen>; }

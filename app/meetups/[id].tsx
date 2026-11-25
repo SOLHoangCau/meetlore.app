@@ -1,0 +1,10 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
+import { useApp } from '../../src/lib/store';
+import { SafetyPanel } from '../../src/parts';
+import { Banner, Btn, Card, Check, Field, Gap, H2, P, Screen, Small, Tag } from '../../src/ui';
+export default function Meet() { const { id } = useLocalSearchParams<{ id: string }>(); const { t, s, a, hubs } = useApp(); const r = useRouter(); const m = s.meetups.find((x) => x.id === id); const [f, setF] = useState({ safe: true, learned: true, again: true, body: '' }); if (!m) return <Screen back title="404"><P>—</P></Screen>; const hub = hubs.find((h) => h.slug === m.hub)?.[s.locale].name ?? '';
+  return <Screen back title={t('meetTitle')}><Card><Tag tone={m.status === 'completed' ? 'moss' : 'indigo'} label={t(m.status === 'completed' ? 'stCompleted' : 'stAgreed')} /><Gap h={8} /><H2>{hub}</H2><P>{m.when}</P><Small>{m.note}</Small></Card><SafetyPanel plan={`MeetLore: ${hub}, ${m.when}. ${m.note}`} /><Btn kind="danger" label={t('helpTitle')} onPress={() => r.push({ pathname: '/help', params: { hub: m.hub } })} /><Gap h={8} />
+    {m.status === 'agreed' && <Btn label={t('confirmMet')} onPress={() => a.completeMeetup(m.id)} />}
+    {m.status === 'completed' && !m.reviewed && <><H2 style={{ marginBottom: 6 }}>{t('refTitle')}</H2><Check label={t('feltSafe')} on={f.safe} onPress={() => setF({ ...f, safe: !f.safe })} /><Check label={t('learned')} on={f.learned} onPress={() => setF({ ...f, learned: !f.learned })} /><Check label={t('again')} on={f.again} onPress={() => setF({ ...f, again: !f.again })} /><Field label={t('refBody')} multiline value={f.body} onChangeText={(x) => setF({ ...f, body: x })} /><Small style={{ marginBottom: 8 }}>{t('refHidden')}</Small><Btn label={t('send')} onPress={() => a.reviewMeetup(m.id, f.safe, f.learned, f.again, f.body)} /></>}
+    {m.reviewed && <><Banner tone="moss" title={t('refDone')} /><Btn label={t('writeNote')} onPress={() => r.push('/knowledge/new')} /></>}</Screen>; }

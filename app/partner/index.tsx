@@ -1,0 +1,5 @@
+import { useRouter } from 'expo-router';
+import { useApp } from '../../src/lib/store';
+import { Banner, Btn, Card, Gap, H2, P, Screen, Small } from '../../src/ui';
+export default function Partner() { const { t, s } = useApp(); const r = useRouter();
+  return <Screen back title={t('vpTitle')}><P muted style={{ marginBottom: 16 }}>{t('vpBody')}</P><Card><H2 style={{ marginBottom: 6 }}>{t('vpGet')}</H2>{(['vpGet1', 'vpGet2', 'vpGet3'] as const).map((k) => <P key={k}>• {t(k)}</P>)}</Card><Card><H2 style={{ marginBottom: 6 }}>{t('vpNeed')}</H2>{(['vpNeed1', 'vpNeed2', 'vpNeed3'] as const).map((k) => <P key={k}>• {t(k)}</P>)}</Card><Banner tone="moss" title={t('vpFee')} /><Btn label={t('vpApply')} onPress={() => r.push(s.email ? '/partner/apply' : '/auth/sign-up')} /><Gap h={8} /><Btn kind="ghost" label={t('vsTitle')} onPress={() => r.push('/partner/status')} />{s.myPartner && <Btn kind="ghost" label={t('pdOpen')} onPress={() => r.push('/partner/dashboard')} />}<Small>{' '}</Small></Screen>; }

@@ -1,0 +1,114 @@
+{
+  "expo": {
+    "name": "MeetLore",
+    "slug": "trigiao-waylore",
+    "scheme": "meetlore",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "app.meetlore",
+      "associatedDomains": [
+        "applinks:meetlore.app",
+        "webcredentials:meetlore.app"
+      ],
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "app.meetlore",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "scheme": "https",
+              "host": "meetlore.app",
+              "pathPrefix": "/h/"
+            },
+            {
+              "scheme": "https",
+              "host": "meetlore.app",
+              "pathPrefix": "/k/"
+            },
+            {
+              "scheme": "https",
+              "host": "meetlore.app",
+              "pathPrefix": "/invite/"
+            }
+          ]
+        }
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/monochrome-icon.png",
+        "backgroundColor": "#B23521"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-dev-client",
+      "expo-font",
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "MeetLore dùng Face ID để mở khóa app khi bạn bật khóa sinh trắc học."
+        }
+      ],
+      "@maplibre/maplibre-react-native",
+      "expo-task-manager",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#B23521"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MeetLore cần chọn ảnh giấy tờ và ảnh chân dung để xác minh tài khoản.",
+          "cameraPermission": "MeetLore cần chụp ảnh giấy tờ và ảnh chân dung để xác minh tài khoản."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "MeetLore dùng vị trí để báo khi bạn đến gần một Hub, kể cả khi app đóng. Vị trí được so sánh ngay trên máy và không gửi lên máy chủ.",
+          "locationWhenInUsePermission": "MeetLore dùng vị trí để hiện các Hub gần bạn.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#F5F0E6"
+        }
+      ]
+    ],
+    "owner": "santaclausvietnams-team",
+    "icon": "./assets/icon.png",
+    "extra": {
+      "eas": {
+        "projectId": "f26af558-7eb0-4f05-9dd7-728bd89de0bd"
+      }
+    }
+  }
+}

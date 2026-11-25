@@ -1,0 +1,7 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
+import { useApp } from '../src/lib/store';
+import { SafetyPanel } from '../src/parts';
+import { Banner, Btn, Check, Chip, Field, Gap, Screen, Small, Wrap } from '../src/ui';
+export default function Report() { const { urgent } = useLocalSearchParams<{ urgent?: string }>(); const { t, a } = useApp(); const r = useRouter(); const [x, set] = useState({ c: urgent ? 'unsafe_meeting' : 'harassment', b: '', u: !!urgent }); const [d, setD] = useState(false); if (d) return <Screen back title={t('repTitle')}><Banner tone="moss" title={t('repDone')} /><Btn label={t('next')} onPress={() => r.back()} /></Screen>;
+  return <Screen back title={t('repTitle')}><Small style={{ marginBottom: 6 }}>{t('repCat')}</Small><Wrap style={{ marginBottom: 12 }}>{([['harassment', 'cHarass'], ['unsafe_meeting', 'cUnsafe'], ['paid_service', 'cPaid'], ['fake_profile', 'cFake'], ['minor', 'cMinor'], ['other', 'cOther']] as const).map(([k, l]) => <Chip key={k} label={t(l)} on={x.c === k} onPress={() => set({ ...x, c: k })} />)}</Wrap><Field label={t('repBody')} multiline value={x.b} onChangeText={(v) => set({ ...x, b: v })} /><Check label={t('repUrgent')} on={x.u} onPress={() => set({ ...x, u: !x.u })} />{x.u && <SafetyPanel />}<Gap h={8} /><Btn label={t('send')} onPress={() => { a.report(x.c, x.b, x.u); setD(true); }} /></Screen>; }

@@ -1,0 +1,5 @@
+import { useApp } from '../../src/lib/store';
+import { Banner, Btn, Card, Gap, H2, P, Row, Screen, Small, Tag } from '../../src/ui';
+import { APP_STATUS } from '../../src/parts';
+export default function Apps() { const { t, s, a } = useApp();
+  return <Screen back title={t('adApps')}>{!s.applications.length && <Banner title={t('adEmpty')} />}{s.applications.map((x) => <Card key={x.id}><Row style={{ justifyContent: 'space-between' }}><H2 style={{ flex: 1 }}>{x.venueName}</H2><Tag tone={APP_STATUS[x.status][1]} label={t(APP_STATUS[x.status][0])} /></Row><Small>{x.address} · {x.registrationNo || '—'}</Small><P style={{ marginVertical: 6 }}>{x.idea}</P>{x.status === 'submitted' && <Row><Btn style={{ flex: 1 }} label={t('adSite')} onPress={() => a.reviewApplication(x.id, 'site_check')} /><Btn style={{ flex: 1 }} kind="secondary" label={t('adReject')} onPress={() => a.reviewApplication(x.id, 'rejected')} /></Row>}{x.status === 'site_check' && <><Btn label={t('adApprove')} onPress={() => a.reviewApplication(x.id, 'approved')} /><Gap h={8} /><Btn kind="secondary" label={t('adInfo')} onPress={() => a.reviewApplication(x.id, 'needs_info')} /></>}</Card>)}</Screen>; }

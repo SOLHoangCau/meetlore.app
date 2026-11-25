@@ -1,0 +1,33 @@
+# Build APK thử trên GitHub, không cần tài khoản Expo. Chạy tay ở tab Actions.
+name: Android APK thử
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx expo prebuild --platform android --no-install --clean
+      - name: Build APK
+        working-directory: android
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: meetlore-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 14
