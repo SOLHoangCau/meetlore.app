@@ -538,3 +538,5 @@ avatarAdd
 avatarChange
 avatarRemove
 avatarRule
+fixFields
+laterNote

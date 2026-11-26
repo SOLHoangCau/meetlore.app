@@ -28,6 +28,7 @@ export async function pushProfile(p: Profile, hubId: (s: string | null) => strin
     gives: p.gives, wants: p.wants, want_languages: p.wantLanguages,
     local_hubs: p.localHubs.map((slug) => hubId(slug)).filter(Boolean),
   } });
+  if (p.helpers.length) await rpc('save_helpers', { p_helpers: p.helpers });
   for (const t of p.trips.filter((x) => !x.id)) await addTrip(id, t, hubId(t.hub));
 }
 /** Ảnh đại diện: thu về 512 px, JPEG, lưu ở avatars/<id>/; ảnh cũ bị xóa. */

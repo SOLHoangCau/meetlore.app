@@ -467,6 +467,11 @@ select t.ok(skip_device_code(),'tài khoản người duyệt bỏ qua mã thi�
 update profile_private set review_account=false where user_id=t.u(3);
 reset role;
 select t.ok((select review_account from profile_private where user_id=t.u(3)),'người dùng không tự đổi được cờ người duyệt');
+-- Lưu người trợ giúp ở bước 9
+reset role; call t.as_user(3);
+select save_helpers('[{"name":"Hồng Vân","relation":"partner","phone":"+84963168102","informed":true},{"name":"x","phone":"123","informed":true}]'::jsonb);
+reset role;
+select t.ok((select count(*) from emergency_contacts where user_id=t.u(3))=1,'lưu người trợ giúp hợp lệ, bỏ dòng sai');
 \pset format unaligned
 \pset tuples_only on
 select 'PASSED '||count(*)||' database checks' from t.results;

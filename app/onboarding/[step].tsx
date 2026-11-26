@@ -2,7 +2,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Image, Platform } from 'react-native';
 import { DocMasker } from '../../src/components/DocMasker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { DOMAINS, LANGUAGES, TOPICS } from '../../src/data/catalog';
 import { UI_LOCALES } from '../../src/i18n';
@@ -12,7 +12,11 @@ import { c, space } from '../../src/theme';
 import { Banner, Btn, Card, Check, Chip, Field, Gap, H2, P, Row, Scale, Screen, Small, Tag, Wrap } from '../../src/ui';
 import { canSubmit, ruleChecks } from '../../supabase/functions/_shared/verification';
 
-const SAVE_STEPS = new Set(['background', 'languages', 'orientation', 'give', 'receive', 'plan']);
+const SAVE_STEPS = new Set(['background', 'languages', 'orientation', 'give', 'receive', 'plan', 'helper']);
+// Bản nháp bước 11 giữ trong bộ nhớ khi người dùng quay lại các bước trước; không ghi ảnh giấy tờ ra đĩa.
+let identityDraft: any = null;
+// Mã lỗi kiểm tra hồ sơ → tên ô cần sửa.
+const FIELD_OF: Record<string, string> = { name_missing: 'legalName', name_single_word: 'legalName', nationality_missing: 'nationality', phone_invalid: 'phone', city_missing: 'currentCity', doc_type_missing: 'docType', doc_last4_invalid: 'docLast4', doc_image_missing: 'docImage', selfie_missing: 'selfie', birth_year_missing: 'birthDate', under_18: 'birthDate', helper_missing: 'helperName', helper_name_missing: 'helperName', helper_phone_invalid: 'helperPhone', helper_phone_same: 'helperPhone', helper_not_informed: 'helperInformed', helper_required: 'helperName', invalid_phone: 'phone', files_required: 'docImage', adult_required: 'birthDate' };
 const STEPS = ['language', 'basics', 'background', 'languages', 'orientation', 'give', 'receive', 'plan', 'helper', 'alerts', 'identity'] as const;
 const LEVELS = [['native', 'lvNative'], ['fluent', 'lvFluent'], ['conversational', 'lvConv'], ['learning', 'lvLearning']] as const;
 const CAPS = [['education', 'kEducation'], ['occupation', 'kOccupation'], ['skill', 'kSkill'], ['craft', 'kCraft'], ['creative_work', 'kCreative'], ['community_role', 'kCommunityRole'], ['influence', 'kInfluence']] as const;
@@ -25,13 +29,14 @@ export default function Onboarding() {
   const i = Math.max(0, STEPS.indexOf(step as any)); const key = STEPS[i]; const [err, setErr] = useState('');
   const [birth, setBirth] = useState(''); const [cap, setCap] = useState({ kind: 'occupation', title: '', years: '', credential: '' }); const [trip, setTrip] = useState<Trip>({ hub: null, country: 'VN', city: '', from: '', to: '', purpose: '' }); const [addL, setAddL] = useState(false);
   const [h, setH] = useState<Helper>(p.helpers[0] ?? { name: '', relation: 'family', phone: '', email: '', informed: false });
-  const [v, setV] = useState({ legalName: '', nationality: 'VN', phone: '', city: p.homeProvince, docType: 'national_id' as 'national_id' | 'passport', docCountry: 'VN', docLast4: '', hasDoc: false, hasSelfie: false, docUri: undefined as string | undefined, selfieUri: undefined as string | undefined, truthful: false, method: (s.flags.verification_photo ? 'photo' : 'in_person') as 'photo' | 'in_person' });
+  const [v, setV] = useState(() => identityDraft?.uid === s.userId ? identityDraft.v : { legalName: '', nationality: 'VN', phone: '', city: p.homeProvince, docType: 'national_id' as 'national_id' | 'passport', docCountry: 'VN', docLast4: '', hasDoc: false, hasSelfie: false, docUri: undefined as string | undefined, selfieUri: undefined as string | undefined, truthful: false, method: (s.flags.verification_photo ? 'photo' : 'in_person') as 'photo' | 'in_person' });
+  useEffect(() => { identityDraft = { uid: s.userId, v }; }, [v, s.userId]);
   const [raw, setRaw] = useState<string | null>(null); const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   // Lưu lên máy chủ mỗi lần bấm Tiếp, để thoát giữa chừng hay mở lại app không mất dữ liệu đã khai.
-  const go = async () => {
+  const go = async (extra?: Partial<typeof p>) => {
     setErr('');
-    if (SAVE_STEPS.has(key)) { setBusy(true); try { await a.saveProfileNow(); } catch (e: any) { setBusy(false); return setErr(t('errGeneric', { x: e?.message ?? '' })); } setBusy(false); }
+    if (SAVE_STEPS.has(key)) { setBusy(true); try { await a.saveProfileNow(extra); } catch (e: any) { setBusy(false); return setErr(t('errGeneric', { x: e?.message ?? '' })); } setBusy(false); }
     if (i + 1 < STEPS.length) r.push(`/onboarding/${STEPS[i + 1]}`);
   };
   const submitted = !!s.verification && s.verification.status !== 'needs_info';
@@ -44,9 +49,19 @@ export default function Onboarding() {
     if (f === 'hasDoc') { setRaw(res.assets[0].uri); setV({ ...v, hasDoc: false, docUri: undefined }); } else setV({ ...v, hasSelfie: true, selfieUri: res.assets[0].uri });
   };
   const afterAlerts = () => { if (submitted) r.replace('/me'); else go(); };
-  const finish = () => {
-    const inPerson = v.method === 'in_person'; const input = verificationInput(p, { ...v, hasDoc: inPerson || v.hasDoc, hasSelfie: inPerson || v.hasSelfie }); const flags = a.submitVerification(input, v);
-    if (!v.truthful || flags.length) return setErr(flags.map((x) => x.code).join(', ') || t('truthful')); r.replace('/verification');
+  const fieldNames = (codes: string[]) => t('fixFields', { x: [...new Set(codes.map((c0) => FIELD_OF[c0] ?? c0))].map((k) => (t as any)(k)).join(' · ') });
+  const finish = async () => {
+    const inPerson = v.method === 'in_person'; const input = verificationInput(p, { ...v, hasDoc: inPerson || v.hasDoc, hasSelfie: inPerson || v.hasSelfie });
+    setBusy(true); setErr('');
+    try {
+      const flags = await a.submitVerification(input, v);
+      setBusy(false);
+      if (flags.length) return setErr(fieldNames(flags.map((x) => x.code)));
+      identityDraft = null; r.replace('/verification');
+    } catch (e: any) {
+      setBusy(false); const code = String(e?.message ?? '');
+      setErr(FIELD_OF[code] ? fieldNames([code]) : code === 'access_code_required' ? t('accessNeed') : t('errGeneric', { x: code }));
+    }
   };
   const topicsPicker = (selected: (id: string) => boolean, tap: (id: string) => void, label?: (id: string) => string | undefined) => DOMAINS.map((d) => <View key={d.id} style={{ marginBottom: space.l }}><Small style={{ marginBottom: 6 }}>{d[L]}</Small><Wrap>{TOPICS.filter((x) => x.domain === d.id).map((x) => <Chip key={x.id} label={(label?.(x.id) ?? '') + x[L]} on={selected(x.id)} tone={label?.(x.id) ? 'son' : 'indigo'} onPress={() => tap(x.id)} />)}</Wrap></View>);
   const langChips = LANGUAGES.filter((l) => !p.languages.some((x) => x.code === l.code));
@@ -63,9 +78,9 @@ export default function Onboarding() {
     content = <><Small style={{ marginBottom: 6 }}>{t('wantLang')}</Small><Wrap style={{ marginBottom: space.l }}>{LANGUAGES.slice(0, 13).map((l) => <Chip key={l.code} label={l.native} on={p.wantLanguages.includes(l.code)} onPress={() => a.setProfile({ wantLanguages: toggle(p.wantLanguages, l.code) })} />)}</Wrap>{topicsPicker((id) => !!p.wants[id], tap, (id) => p.wants[id] === 3 ? '★ ' : undefined)}</>; next = () => { if (!p.gives.length && !Object.keys(p.wants).length && !p.wantLanguages.length) return setErr(t('errGiveOrGet')); go(); }; }
   if (key === 'plan') { title = t('sPlan'); sub = t('sPlanB'); const name = (x: Trip) => hubs.find((h2) => h2.slug === x.hub)?.[L].name ?? t('jNoHub'); const dates = /^\d{4}-\d{2}-\d{2}$/.test(trip.from) && /^\d{4}-\d{2}-\d{2}$/.test(trip.to) && trip.to >= trip.from;
     content = <><H2 style={{ marginBottom: 8 }}>{t('asLocal')}</H2><Wrap style={{ marginBottom: space.xl }}>{hubs.map((x) => <Chip key={x.slug} label={x[L].name} on={p.localHubs.includes(x.slug)} onPress={() => a.setProfile({ localHubs: toggle(p.localHubs, x.slug) })} />)}</Wrap><H2 style={{ marginBottom: 8 }}>{t('asTraveler')}</H2><Row><View style={{ flex: 1 }}><Field label={t('jCountry')} value={trip.country} maxLength={2} autoCapitalize="characters" onChangeText={(x) => setTrip({ ...trip, country: x.toUpperCase() })} /></View><View style={{ flex: 2 }}><Field label={t('jCity')} value={trip.city} onChangeText={(x) => setTrip({ ...trip, city: x })} /></View></Row><Small style={{ marginBottom: 6 }}>{t('jHubOpt')}</Small><Wrap style={{ marginBottom: 12 }}>{hubs.map((x) => <Chip key={x.slug} label={x[L].name} on={trip.hub === x.slug} onPress={() => setTrip({ ...trip, hub: trip.hub === x.slug ? null : x.slug })} />)}</Wrap><Row><View style={{ flex: 1 }}><Field label={t('from')} placeholder="2026-12-20" value={trip.from} onChangeText={(x) => setTrip({ ...trip, from: x })} /></View><View style={{ flex: 1 }}><Field label={t('to')} placeholder="2026-12-24" value={trip.to} onChangeText={(x) => setTrip({ ...trip, to: x })} /></View></Row><Btn kind="secondary" label={t('addTrip')} disabled={!dates || trip.city.trim().length < 2} onPress={() => { a.setProfile({ trips: [...p.trips, trip] }); setTrip({ ...trip, hub: null, city: '', from: '', to: '' }); }} /><Gap h={8} />{p.trips.map((x, n) => <Card key={n}><Row style={{ justifyContent: 'space-between' }}><P style={{ flex: 1 }}>{x.city} · {name(x)} · {x.from} → {x.to}</P><Btn kind="ghost" label="×" onPress={() => a.setProfile({ trips: p.trips.filter((_, m) => m !== n) })} /></Row></Card>)}</>; }
-  if (key === 'helper') { title = t('sHelper'); sub = t('sHelperB'); next = () => { const phoneOk = /^\+[1-9]\d{7,14}$/.test(h.phone); if (h.name.trim().length < 2 || !phoneOk || !h.informed) return setErr(`${t('helperName')} · ${t('helperPhone')} · ${t('helperInformed')}`); a.setProfile({ helpers: [h] }); go(); };
+  if (key === 'helper') { title = t('sHelper'); sub = t('sHelperB'); next = () => { const phoneOk = /^\+[1-9]\d{7,14}$/.test(h.phone); if (h.name.trim().length < 2 || !phoneOk || !h.informed) return setErr(`${t('helperName')} · ${t('helperPhone')} · ${t('helperInformed')}`); a.setProfile({ helpers: [h] }); go({ helpers: [h] }); };
     content = <><Field label={t('helperName')} value={h.name} onChangeText={(x) => setH({ ...h, name: x })} /><Small style={{ marginBottom: 6 }}>{t('helperRel')}</Small><Wrap style={{ marginBottom: 12 }}>{RELS.map(([k, n]) => <Chip key={k} label={t(n)} on={h.relation === k} onPress={() => setH({ ...h, relation: k })} />)}</Wrap><Field label={t('helperPhone')} value={h.phone} keyboardType="phone-pad" onChangeText={(x) => setH({ ...h, phone: x })} /><Field label={`${t('helperEmail')} (${t('optional')})`} value={h.email} autoCapitalize="none" keyboardType="email-address" onChangeText={(x) => setH({ ...h, email: x })} /><Check label={t('helperInformed')} on={h.informed} onPress={() => setH({ ...h, informed: !h.informed })} /></>; }
-  if (key === 'identity') { title = t('sIdentity'); sub = t('sIdentityB'); next = () => { if (!s.hasAccess) return setErr(t('accessNeed')); const inPerson = v.method === 'in_person'; const f = ruleChecks(verificationInput(p, { ...v, hasDoc: inPerson || v.hasDoc, hasSelfie: inPerson || v.hasSelfie }), new Date().getFullYear()); if (!canSubmit(f)) return setErr(f.filter((x) => x.severity === 'block').map((x) => x.code).join(', ')); if (!v.truthful) return setErr(t('truthful')); finish(); };
+  if (key === 'identity') { title = t('sIdentity'); sub = t('sIdentityB'); next = () => { if (!s.hasAccess) return setErr(t('accessNeed')); const inPerson = v.method === 'in_person'; const f = ruleChecks(verificationInput(p, { ...v, hasDoc: inPerson || v.hasDoc, hasSelfie: inPerson || v.hasSelfie }), new Date().getFullYear()); if (!canSubmit(f)) { const names = [...new Set(f.filter((x) => x.severity === 'block').map((x) => FIELD_OF[x.code] ?? x.code))]; return setErr(t('fixFields', { x: names.map((k) => (t as any)(k)).join(' · ') })); } if (!v.truthful) return setErr(t('truthful')); finish(); };
     const methods = ([['photo', 'vmPhoto', 'vmPhotoB', s.flags.verification_photo], ['in_person', 'vmHub', 'vmHubB', s.flags.verification_in_person]] as const).filter((m) => m[3]);
     content = <>
       {!s.hasAccess && <Card style={{ borderColor: c.son }}><H2>{t('accessTitle')}</H2><P muted style={{ marginVertical: 6 }}>{t('accessBody', { n: s.capacity.max })}</P><Field label={t('accessCode')} value={code} autoCapitalize="characters" onChangeText={setCode} /><Btn kind="secondary" disabled={code.trim().length < 6} label={t('accessUse')} onPress={async () => { try { setErr(''); await a.redeemCode(code); } catch (e: any) { setErr(e.message === 'beta_full' ? t('accessFull') : t('accessBad')); } }} /></Card>}
@@ -82,6 +97,6 @@ export default function Onboarding() {
       </> : <Banner title={t('vmHubHow')} body={t('vmHubHowB')} />}
       <Check label={t('truthful')} on={v.truthful} onPress={() => setV({ ...v, truthful: !v.truthful })} /></>; }
   if (key === 'alerts') { title = t('sNotify'); sub = t('sNotifyB'); next = null; content = <>{submitted && <><Banner tone="moss" title={t('profileSaved')} body={t('profileSavedB')} /><Gap h={8} /></>}<Check label={t('allowTranslate')} on={s.allowTranslate} onPress={() => a.patch({ allowTranslate: !s.allowTranslate })} /><Gap /><Btn label={t('allowNotify')} onPress={async () => { setBusy(true); let ok = false; try { await setDailyAlertLimit(s.maxAlerts); ok = await enableHubAlerts(hubs.filter((x) => x.status !== 'preparing').map((x) => ({ id: x.slug, name: x[L].name, lat: x.lat, lng: x.lng, radius: x.radius }))); } catch { ok = false; } setBusy(false); a.patch({ alertsOn: ok }); afterAlerts(); }} /><Gap h={8} /><Btn kind="secondary" label={t('skipNotify')} onPress={afterAlerts} /></>; }
-  const later = i >= 2 && key !== 'identity' && !!p.displayName ? <Btn kind="ghost" label={t('browseFirst')} onPress={() => { a.saveProfile(); r.replace('/hubs'); }} /> : null;
+  const later = i >= 2 && !!p.displayName ? <View>{(key === 'helper' || key === 'identity') && <Small style={{ textAlign: 'center', marginTop: 8 }}>{t('laterNote')}</Small>}<Btn kind="ghost" label={t('browseFirst')} onPress={() => { a.saveProfile(); r.replace('/hubs'); }} /></View> : null;
   return <Screen back={i > 0} footer={next ? <View><Btn disabled={busy} label={busy ? t('saving') : key === 'identity' ? t('submitReview') : t('next')} onPress={next} />{later}</View> : later ?? undefined}><Small style={{ color: c.son, marginBottom: 6 }}>{t('stepOf', { a: i + 1, b: STEPS.length })}</Small><H2 style={{ fontSize: 25, lineHeight: 33 }}>{title}</H2><P muted style={{ marginTop: 6, marginBottom: space.l }}>{sub}</P>{content}{!!err && <><Gap h={8} /><Banner tone="son" title={err} /></>}</Screen>;
 }

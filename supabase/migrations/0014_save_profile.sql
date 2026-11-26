@@ -93,3 +93,20 @@ language sql stable security definer set search_path = public as $$
 $$;
 revoke execute on function public.skip_device_code() from public, anon;
 grant execute on function public.skip_device_code() to authenticated;
+
+-- Người trợ giúp được lưu ngay ở bước 9 (trước đây chỉ lưu khi gửi xác minh, nên bị mất khi app tải lại dữ liệu).
+create or replace function public.save_helpers(p_helpers jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'not_authenticated'; end if;
+  if jsonb_typeof(coalesce(p_helpers, '[]'::jsonb)) <> 'array' or jsonb_array_length(coalesce(p_helpers, '[]'::jsonb)) > 3 then raise exception 'too_many_helpers'; end if;
+  delete from emergency_contacts where user_id = auth.uid();
+  insert into emergency_contacts(user_id, full_name, relation, phone_e164, email, language_code, informed_confirmed_at)
+  select auth.uid(), trim(x->>'name'), coalesce(nullif(x->>'relation', ''), 'other'), x->>'phone', nullif(trim(coalesce(x->>'email', '')), ''), x->>'language', now()
+  from jsonb_array_elements(coalesce(p_helpers, '[]'::jsonb)) x
+  where coalesce((x->>'informed')::boolean, false) and char_length(trim(coalesce(x->>'name', ''))) between 2 and 100
+    and (x->>'phone') ~ '^\+[1-9][0-9]{7,14}$'
+    and coalesce(nullif(x->>'relation', ''), 'other') in ('family','partner','friend','colleague','travel_agency','embassy','other');
+end $$;
+revoke execute on function public.save_helpers(jsonb) from public, anon;
+grant execute on function public.save_helpers(jsonb) to authenticated;
