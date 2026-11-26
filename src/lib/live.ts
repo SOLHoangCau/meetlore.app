@@ -2,7 +2,9 @@
 import type { HubSeed } from '../data/catalog';
 import type { Flags, Notice, ReportItem } from './store';
 import type { Conversation, Demand, KnowledgeItem, LedgerRow, Meetup, MyPartner, Offer, Person, Profile, QueueItem, Session, State, StatRow, Trip, VerificationForm, Verification, Voucher } from './store';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { forgetLocalAuth, rpc, supabase } from './supabase';
+import { contentLocale, UI_LOCALES, type UiLocale } from '../i18n';
 import type { Match } from '../../supabase/functions/_shared/matching';
 import type { PointsInput } from '../../supabase/functions/_shared/points';
 
@@ -18,16 +20,37 @@ export async function saveBasics(p: Profile, birth: string) {
 }
 export async function pushProfile(p: Profile, hubId: (s: string | null) => string | null) {
   const c = db(); const { data: { session } } = await c.auth.getSession(); if (!session) throw new Error('not_authenticated'); const id = session.user.id;
-  must(await c.from('profiles').update({ display_name: p.displayName, headline: p.headline || null }).eq('id', id));
-  await rpc('save_orientation', { a: p.answers[0], b: p.answers[1], c: p.answers[2], d: p.answers[3], e: p.answers[4], p_depth: p.depth });
-  for (const t of ['profile_languages', 'capabilities', 'offers', 'seeks']) must(await c.from(t).delete().eq('user_id', id));
-  if (p.languages.length) must(await c.from('profile_languages').insert(p.languages.map((l) => ({ user_id: id, language_code: l.code, level: l.level, can_help_practice: l.canHelpPractice, wants_practice: p.wantLanguages.includes(l.code) }))));
-  if (p.capabilities.length) must(await c.from('capabilities').insert(p.capabilities.map((x) => ({ user_id: id, kind: x.kind, title: x.title, years_experience: x.years ?? null, credential: x.credential ?? null }))));
-  if (p.gives.length) must(await c.from('offers').insert(p.gives.map((t) => ({ user_id: id, topic_id: t, depth: p.depth }))));
-  const seeks = [...Object.entries(p.wants).map(([t, i]) => ({ user_id: id, topic_id: t, depth: p.depth, importance: i })), ...p.wantLanguages.map((l) => ({ user_id: id, language_code: l, depth: 'short', importance: 2 }))];
-  if (seeks.length) must(await c.from('seeks').insert(seeks));
+  // Một lần gọi, chạy trọn hoặc không (migration 0014). Hub bản địa ghi ở trạng thái chờ duyệt.
+  await rpc('save_profile', { p: {
+    display_name: p.displayName, headline: p.headline, answers: p.answers, depth: p.depth,
+    languages: p.languages.map((l) => ({ code: l.code, level: l.level, can_help: l.canHelpPractice })),
+    capabilities: p.capabilities.map((x) => ({ kind: x.kind, title: x.title, years: x.years ?? '', credential: x.credential ?? '' })),
+    gives: p.gives, wants: p.wants, want_languages: p.wantLanguages,
+    local_hubs: p.localHubs.map((slug) => hubId(slug)).filter(Boolean),
+  } });
   for (const t of p.trips.filter((x) => !x.id)) await addTrip(id, t, hubId(t.hub));
-  for (const slug of p.localHubs) { const h = hubId(slug); if (h) await c.from('hub_members').insert({ hub_id: h, user_id: id }); }
+}
+/** Ảnh đại diện: thu về 512 px, JPEG, lưu ở avatars/<id>/; ảnh cũ bị xóa. */
+export async function uploadAvatar(uri: string) {
+  const c = db(); const { data: { session } } = await c.auth.getSession(); if (!session) throw new Error('not_authenticated'); const id = session.user.id;
+  const small = await manipulateAsync(uri, [{ resize: { width: 512, height: 512 } }], { compress: 0.8, format: SaveFormat.JPEG });
+  const blob = await (await fetch(small.uri)).blob(); const path = `${id}/${Date.now()}.jpg`;
+  must(await c.storage.from('avatars').upload(path, blob, { contentType: 'image/jpeg', upsert: true }));
+  const old = must(await c.from('profiles').select('avatar_url').eq('id', id).maybeSingle()) as { avatar_url: string | null } | null;
+  await rpc('set_avatar', { p_path: path });
+  if (old?.avatar_url && old.avatar_url !== path) await c.storage.from('avatars').remove([old.avatar_url]);
+}
+export async function removeAvatar() {
+  const c = db(); const { data: { session } } = await c.auth.getSession(); if (!session) throw new Error('not_authenticated');
+  const old = must(await c.from('profiles').select('avatar_url').eq('id', session.user.id).maybeSingle()) as { avatar_url: string | null } | null;
+  await rpc('set_avatar', { p_path: null });
+  if (old?.avatar_url) await c.storage.from('avatars').remove([old.avatar_url]);
+}
+/** Liên kết có hạn 1 ngày cho các ảnh đại diện; ảnh nào lỗi thì bỏ qua. */
+async function avatarUrls(paths: (string | null | undefined)[]): Promise<Record<string, string>> {
+  const list = [...new Set(paths.filter((x): x is string => !!x))]; if (!list.length) return {};
+  const { data } = await db().storage.from('avatars').createSignedUrls(list, 86400);
+  return Object.fromEntries((data ?? []).filter((x) => x.signedUrl && x.path).map((x) => [x.path as string, x.signedUrl as string]));
 }
 export async function addTrip(userId: string, t: Trip, hubId: string | null) {
   must(await db().from('trip_plans').insert({ user_id: userId, hub_id: hubId, destination_text: t.city, country_code: t.country, city: t.city, purpose: t.purpose || null, starts_on: t.from, ends_on: t.to }));
@@ -73,8 +96,8 @@ export async function loadStats(slugOf: (id: string | null) => string): Promise<
   return data.map((r) => ({ month: r.month.slice(0, 7), hub: r.hub_slug ?? slugOf(r.hub_id), region: r.wage_region, cost: +r.cost_vnd, sessions: r.sessions, minutes: +r.session_minutes, people: +r.session_people, equivalentHours: +r.equivalent_hours, knowledge: r.knowledge_approved, points: +r.points_issued, redeemed: +r.points_redeemed, bill: +r.bill_vnd, discount: +r.discount_vnd, reference: +r.reference_vnd, conservative: +r.conservative_vnd, outcomes: r.outcome_responses }));
 }
 
-function toPerson(p: any): Person {
-  return { id: p.id, name: p.display_name, headline: p.headline ?? '', headlineEn: p.headline ?? '', background: (p.capabilities ?? []).filter((c: any) => c.visible).map((c: any) => c.title), languages: (p.profile_languages ?? []).map((l: any) => ({ code: l.language_code, level: l.level, canHelpPractice: l.can_help_practice })), gives: (p.offers ?? []).map((o: any) => o.topic_id), wants: (p.seeks ?? []).filter((x: any) => x.topic_id).map((x: any) => x.topic_id), wantsLanguages: (p.seeks ?? []).filter((x: any) => x.language_code).map((x: any) => x.language_code), depth: 'medium', orientation: p.orientation_score ?? 50, gender: '', presence: [] };
+function toPerson(p: any, avatars: Record<string, string> = {}): Person {
+  return { id: p.id, name: p.display_name, avatar: p.avatar_url ? avatars[p.avatar_url] : undefined, headline: p.headline ?? '', headlineEn: p.headline ?? '', background: (p.capabilities ?? []).filter((c: any) => c.visible).map((c: any) => c.title), languages: (p.profile_languages ?? []).map((l: any) => ({ code: l.language_code, level: l.level, canHelpPractice: l.can_help_practice })), gives: (p.offers ?? []).map((o: any) => o.topic_id), wants: (p.seeks ?? []).filter((x: any) => x.topic_id).map((x: any) => x.topic_id), wantsLanguages: (p.seeks ?? []).filter((x: any) => x.language_code).map((x: any) => x.language_code), depth: 'medium', orientation: p.orientation_score ?? 50, gender: '', presence: [] };
 }
 
 /** Chỉ đọc hội thoại, dùng để cập nhật tin nhắn thường xuyên mà không tính lại gợi ý kết nối. */
@@ -107,9 +130,9 @@ export async function pull(): Promise<Partial<State>> {
   if (!me) return { ...base, userId: null, email: null };
 
   const [profile, priv, roles, verification, languages, caps, offers, seeks, orientation, trips, members, helpers] = await Promise.all([
-    c.from('profiles').select('display_name,headline,onboarding_step,discoverable,ui_locale,account_status,deletion_requested_at').eq('id', me).maybeSingle(), c.from('profile_private').select('birth_year,home_country,home_province,home_ward,gender,meet_preference,access_granted_at').eq('user_id', me).maybeSingle(), rows(c.from('user_roles').select('role').eq('user_id', me)),
+    c.from('profiles').select('display_name,headline,avatar_url,onboarding_step,discoverable,ui_locale,account_status,deletion_requested_at').eq('id', me).maybeSingle(), c.from('profile_private').select('birth_year,home_country,home_province,home_ward,gender,meet_preference,access_granted_at').eq('user_id', me).maybeSingle(), rows(c.from('user_roles').select('role').eq('user_id', me)),
     c.from('identity_verifications').select('*').eq('user_id', me).order('submitted_at', { ascending: false }).limit(1).maybeSingle(), rows(c.from('profile_languages').select('*').eq('user_id', me)), rows(c.from('capabilities').select('*').eq('user_id', me)), rows(c.from('offers').select('*').eq('user_id', me)), rows(c.from('seeks').select('*').eq('user_id', me)),
-    c.from('knowledge_orientation').select('*').eq('user_id', me).maybeSingle(), rows(c.from('trip_plans').select('*').eq('user_id', me)), rows(c.from('hub_members').select('hub_id,status').eq('user_id', me)), rows(c.from('emergency_contacts').select('*').eq('user_id', me)),
+    c.from('knowledge_orientation').select('*').eq('user_id', me).maybeSingle(), rows(c.from('trip_plans').select('*').eq('user_id', me)), rows(c.from('hub_members').select('hub_id,status').eq('user_id', me).neq('status', 'removed')), rows(c.from('emergency_contacts').select('*').eq('user_id', me)),
   ]);
   const p = profile.data, q = priv.data, o = orientation.data;
   const prof: Profile = { displayName: p?.display_name ?? '', birthYear: q?.birth_year ?? null, homeCountry: q?.home_country ?? 'VN', homeProvince: q?.home_province ?? '', homeWard: q?.home_ward ?? '', gender: q?.gender ?? null, meetSame: q?.meet_preference === 'same_gender', headline: p?.headline ?? '', capabilities: caps.map((x) => ({ kind: x.kind, title: x.title, years: x.years_experience ?? undefined, credential: x.credential ?? undefined })), languages: languages.map((l) => ({ code: l.language_code, level: l.level, canHelpPractice: l.can_help_practice })), answers: o ? [o.learn_on_trips, o.ask_locals, o.share_what_i_know, o.write_things_down, o.respect_local_rules] : [4, 4, 3, 3, 4], depth: o?.preferred_depth ?? 'medium', gives: offers.map((x) => x.topic_id), wants: Object.fromEntries(seeks.filter((x) => x.topic_id).map((x) => [x.topic_id, x.importance >= 3 ? 3 : 1])), wantLanguages: seeks.filter((x) => x.language_code).map((x) => x.language_code), localHubs: members.map((m) => slug(m.hub_id)).filter(Boolean) as string[], trips: trips.map((t) => ({ id: t.id, hub: slug(t.hub_id), country: t.country_code ?? '', city: t.city ?? t.destination_text ?? '', from: t.starts_on, to: t.ends_on, purpose: t.purpose ?? '' })), helpers: helpers.map((h) => ({ name: h.full_name, relation: h.relation, phone: h.phone_e164, email: h.email ?? undefined, informed: true })) };
@@ -148,8 +171,10 @@ export async function pull(): Promise<Partial<State>> {
     remoteMatches = [...a, ...b].map((m) => ({ ...m, hubId: slug(m.hubId), reasons: m.reasons.map((r) => r.kind === 'same_hub' ? { ...r, hubId: slug(r.hubId) ?? '' } : r) }));
   }
   const ids = [...new Set([...remoteMatches.map((m) => m.candidateId), ...intents.flatMap((i) => [i.sender_id, i.receiver_id]), ...conversations.map((x) => x.personId)])].filter((x) => x && x !== me);
-  if (ids.length) matchPeople = await rows(c.from('profiles').select('id,display_name,headline,orientation_score,profile_languages(*),offers(topic_id),seeks(topic_id,language_code),capabilities(title,visible)').in('id', ids));
+  if (ids.length) matchPeople = await rows(c.from('profiles').select('id,display_name,headline,avatar_url,orientation_score,profile_languages(*),offers(topic_id),seeks(topic_id,language_code),capabilities(title,visible)').in('id', ids));
 
+  const avatars = await avatarUrls([p?.avatar_url, ...matchPeople.map((x) => x.avatar_url)]).catch(() => ({} as Record<string, string>));
+  prof.avatar = p?.avatar_url ? avatars[p.avatar_url] ?? null : null;
   const admin: Partial<State> = {};
   if (isAdmin) {
     const [queue, apps, fund, reports] = await Promise.all([rpc<any[]>('verification_queue2').catch(() => []), rows(c.from('hub_applications').select('*').order('created_at', { ascending: false })), rpc<any[]>('app_fund_status').catch(() => []), rpc<any[]>('report_queue').catch(() => [])]);
@@ -159,5 +184,6 @@ export async function pull(): Promise<Partial<State>> {
     if (fund[0]) admin.fund = { balance: fund[0].balance, monthIn: fund[0].month_in, monthOut: fund[0].month_out };
   } else admin.applications = await rows(c.from('hub_applications').select('id,status,venue_name,address').eq('applicant_id', me)).then((x) => x.map((y) => ({ id: y.id, status: y.status, venueName: y.venue_name, address: y.address })));
   const b = balance[0];
-  return { ...base, ...admin, userId: me, email: session?.user.email ?? null, onboarded: !!ver, isAdmin, roles: roleNames, notices, previewCount, hasAccess: !flags.invite_required || !!q?.access_granted_at || isAdmin, capacity: capacity[0] ? { used: capacity[0].used, max: capacity[0].max_users } : { used: 0, max: 500 }, deletionAt: p?.deletion_requested_at ? Date.parse(p.deletion_requested_at) : null, ...(p?.ui_locale ? { uiLocale: p.ui_locale, locale: p.ui_locale === 'vi' ? 'vi' : 'en' } : {}), hidden: ver?.status === 'approved' ? p?.discoverable === false : false, profile: prof, verification: ver, incoming: intents.filter((i) => i.receiver_id === me).map((i) => ({ intentId: i.id, personId: i.sender_id, hub: slug(i.hub_id) })), sentIntents: intents.filter((i) => i.sender_id === me).map((i) => i.receiver_id), conversations, meetups, ledger: ledgerRows, sessions: sessionRows, offers: offersOut, vouchers: vouchersOut, remoteDemand, myPartner, maxAlerts: alertLimit, operatorHubs: operators.map((x) => slug(x.hub_id)).filter(Boolean) as string[], people: matchPeople.map(toPerson), remoteMatches, remoteBalance: b ? { available: b.available, pending: b.pending, hours: +b.knowledge_hours } : null };
+  const savedUi = p && UI_LOCALES.includes(p.ui_locale) ? (p.ui_locale as UiLocale) : null;
+  return { ...base, ...admin, ...(savedUi ? { uiLocale: savedUi, locale: contentLocale(savedUi) } : {}), userId: me, email: session?.user.email ?? null, onboarded: !!ver, isAdmin, roles: roleNames, notices, previewCount, hasAccess: !flags.invite_required || !!q?.access_granted_at || isAdmin, capacity: capacity[0] ? { used: capacity[0].used, max: capacity[0].max_users } : { used: 0, max: 500 }, deletionAt: p?.deletion_requested_at ? Date.parse(p.deletion_requested_at) : null, ...(p?.ui_locale ? { uiLocale: p.ui_locale, locale: p.ui_locale === 'vi' ? 'vi' : 'en' } : {}), hidden: ver?.status === 'approved' ? p?.discoverable === false : false, profile: prof, verification: ver, incoming: intents.filter((i) => i.receiver_id === me).map((i) => ({ intentId: i.id, personId: i.sender_id, hub: slug(i.hub_id) })), sentIntents: intents.filter((i) => i.sender_id === me).map((i) => i.receiver_id), conversations, meetups, ledger: ledgerRows, sessions: sessionRows, offers: offersOut, vouchers: vouchersOut, remoteDemand, myPartner, maxAlerts: alertLimit, operatorHubs: operators.map((x) => slug(x.hub_id)).filter(Boolean) as string[], people: matchPeople.map((x) => toPerson(x, avatars)), remoteMatches, remoteBalance: b ? { available: b.available, pending: b.pending, hours: +b.knowledge_hours } : null };
 }

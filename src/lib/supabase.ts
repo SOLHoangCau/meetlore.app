@@ -41,6 +41,9 @@ export async function signInWithEmail(email: string, password: string): Promise<
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
   if (await authStorage.getItem(deviceKey(data.user.id))) { await markAuthenticated(); return 'ok'; }
+  // Tài khoản người duyệt của cửa hàng (bật bằng SQL) không cần mã email trên máy mới.
+  const skip = await supabase.rpc('skip_device_code').then((r) => r.data === true, () => false);
+  if (skip) { await authStorage.setItem(deviceKey(data.user.id), '1'); await markAuthenticated(); return 'ok'; }
   await supabase.auth.signOut({ scope: 'local' });
   await sendDeviceCode(email);
   return 'device_code';

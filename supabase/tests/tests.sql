@@ -343,6 +343,8 @@ reset role; call t.as_user(12);
 select t.fails($$select redeem_access_code(current_setting('t.code'))$$,'invalid_code','mã một lần không dùng lại được');
 reset role; call t.as_user(15);
 select t.fails($$select submit_verification2('photo','Nguyễn Văn Mười','VN','+84900000011','Hà Nội','national_id','VN','1234','khac/a.jpg','khac/b.jpg','[{"name":"Trần Thị A","relation":"family","phone":"+84900000012","informed":true}]')$$,'files_required','ảnh phải nằm trong thư mục của chính mình');
+select t.fails($$select submit_verification2('in_person','Nguyễn Văn Mười','VN','+84900000011','Hà Nội','national_id','VN','1234',null,null,'[]'::jsonb)$$,'method_disabled','đối chiếu tại Hub mặc định tắt');
+reset role; update platform_flags set enabled=true where key='verification_in_person'; call t.as_user(15);
 select set_config('t.ip',(submit_verification2('in_person','Nguyễn Văn Mười','VN','+84900000011','Hà Nội','national_id','VN','1234',null,null,'[{"name":"Trần Thị A","relation":"family","phone":"+84900000012","informed":true}]')->>'code'),false);
 select t.ok(length(current_setting('t.ip'))=6 and (select status from identity_verifications where user_id=t.u(15))='awaiting_in_person','chọn đối chiếu tại Hub nhận mã');
 select t.ok((select doc_image_path from identity_verifications where user_id=t.u(15)) is null,'đối chiếu tại Hub không lưu ảnh');
@@ -425,6 +427,46 @@ select t.fails($$select import_daily_figures('[{"id":"bad","name":"B","born_year
 select set_flag('daily_figure',true);
 select t.ok((public_flags()->>'daily_figure')::boolean,'admin bật cờ nhân vật hôm nay');
 reset role;
+-- Lưu hồ sơ một lần (0014)
+reset role; call t.as_user(3);
+select save_profile(jsonb_build_object('display_name','Lan','headline','Thợ nhuộm chàm','answers','[5,4,3,2,1]'::jsonb,'depth','deep',
+  'languages','[{"code":"vi","level":"native","can_help":true},{"code":"xx","level":"fluent"}]'::jsonb,
+  'capabilities','[{"kind":"craft","title":"Nhuộm chàm","years":"12","credential":"artisan"},{"kind":"skill","title":"x"}]'::jsonb,
+  'gives',(select jsonb_agg(id) from (select id from topics order by id limit 2) z),
+  'wants',(select jsonb_object_agg(id,3) from (select id from topics order by id desc limit 1) z),
+  'want_languages','["en"]'::jsonb,
+  'local_hubs',(select jsonb_agg(id::text) from hubs where slug in ('ho-guom','cat-cat'))));
+select t.ok((select headline from profiles where id=t.u(3))='Thợ nhuộm chàm','lưu câu giới thiệu');
+select t.ok((select count(*) from profile_languages where user_id=t.u(3))=1,'bỏ qua mã ngôn ngữ không có');
+select t.ok((select count(*) from capabilities where user_id=t.u(3))=1 and (select credential from capabilities where user_id=t.u(3))='artisan','lưu năng lực hợp lệ');
+select t.ok((select count(*) from offers where user_id=t.u(3))=2,'lưu điều cho đi');
+select t.ok((select count(*) from seeks where user_id=t.u(3))=2,'lưu điều muốn nhận và ngôn ngữ muốn luyện');
+select t.ok((select count(*) from hub_members m join hubs h on h.id=m.hub_id where m.user_id=t.u(3) and h.slug in ('ho-guom','cat-cat') and m.status in ('pending','ready'))=2,'Hub bản địa được ghi, kể cả Hub cần mã mời');
+select save_profile(jsonb_build_object('display_name','Lan','local_hubs',(select jsonb_agg(id::text) from hubs where slug='cat-cat')));
+select t.ok((select count(*) from hub_members m join hubs h on h.id=m.hub_id where m.user_id=t.u(3) and h.slug='ho-guom' and m.status<>'removed')=0 and (select count(*) from hub_members m join hubs h on h.id=m.hub_id where m.user_id=t.u(3) and h.slug='cat-cat' and m.status<>'removed')=1,'bỏ chọn Hub thì yêu cầu bị gỡ');
+select t.ok((select count(*) from offers where user_id=t.u(3))=0,'lưu lại thay thế toàn bộ danh sách');
+reset role; set role anon;
+select t.fails($$select save_profile('{}'::jsonb)$$,'permission denied','khách không gọi được save_profile');
+reset role;
+-- Ảnh đại diện
+reset role; call t.as_user(3);
+select set_avatar(t.u(3)::text||'/a.jpg');
+select t.ok((select avatar_url from profiles where id=t.u(3))=t.u(3)::text||'/a.jpg','đặt ảnh đại diện của mình');
+select t.fails($$select set_avatar(t.u(4)::text||'/a.jpg')$$,'forbidden','không đặt ảnh trong thư mục người khác');
+select t.fails($$select admin_clear_avatar(t.u(3),'ảnh không phù hợp')$$,'forbidden','người thường không gỡ ảnh người khác');
+reset role; call t.as_user(9);
+select admin_clear_avatar(t.u(3),'ảnh không phù hợp');
+reset role;
+select t.ok((select avatar_url from profiles where id=t.u(3)) is null and exists(select 1 from user_notices where user_id=t.u(3) and kind='content_removed'),'Admin gỡ ảnh và báo cho người dùng');
+reset role;
+-- Tài khoản người duyệt
+reset role; call t.as_user(3);
+select t.ok(not skip_device_code(),'người thường vẫn cần mã thiết bị');
+reset role; update profile_private set review_account=true where user_id=t.u(3); call t.as_user(3);
+select t.ok(skip_device_code(),'tài khoản người duyệt bỏ qua mã thiết bị');
+update profile_private set review_account=false where user_id=t.u(3);
+reset role;
+select t.ok((select review_account from profile_private where user_id=t.u(3)),'người dùng không tự đổi được cờ người duyệt');
 \pset format unaligned
 \pset tuples_only on
 select 'PASSED '||count(*)||' database checks' from t.results;

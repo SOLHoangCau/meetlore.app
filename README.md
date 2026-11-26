@@ -29,7 +29,7 @@ npm run test:db   # cần Linux có PostgreSQL 16 và quyền root
 
 Hướng dẫn vận hành đầy đủ: `docs/VAN-HANH-THU-NGHIEM.md`. Tóm tắt:
 
-1. Dự án Supabase đặt tại **Tokyo (ap-northeast-1)**; văn bản pháp lý đã ghi đúng nơi này. Chạy lần lượt `supabase/migrations/*.sql` (đến `0013_daily_figures_meetlore.sql`), rồi `supabase/seed.sql`, `supabase/storage.sql`, `supabase/storage-media.sql`.
+1. Dự án Supabase đặt tại **Tokyo (ap-northeast-1)**; văn bản pháp lý đã ghi đúng nơi này. Chạy lần lượt `supabase/migrations/*.sql` (đến `0014_save_profile.sql`), rồi `supabase/seed.sql`, `supabase/storage.sql`, `supabase/storage-media.sql`, `supabase/storage-avatars.sql`.
 2. Bật xác nhận email, cấu hình SMTP riêng. Ba mẫu email phải hiển thị mã `{{ .Token }}`: **Confirm signup** (đăng ký), **Magic Link** (mã khi đăng nhập trên thiết bị mới) và **Reset Password** (đặt lại mật khẩu). Authentication → URL Configuration: Site URL `https://meetlore.app`.
 3. Triển khai `supabase/functions/*`. Đặt bí mật `WEBHOOK_SECRET`. Đặt lịch (Supabase Cron): `send-push` mỗi phút, `maintenance` mỗi giờ, đều gửi header `x-webhook-secret`.
 4. Đăng ký 3 tài khoản quản trị trong app, rồi chạy `bootstrap_admin(...)` trong SQL Editor (xem hướng dẫn vận hành).
@@ -52,15 +52,14 @@ Hồ sơ `testflight` lấy địa chỉ Supabase từ biến môi trường **p
 
 Đã nối với `santaclausvietnams-team/trigiao-waylore` trong `app.json`. Logo nằm ở `assets/logo`; muốn dùng logo 2 làm biểu tượng app, chép các tệp `bo-2-*` đè lên tệp cùng tên trong `assets`.
 
-## Build Android
+## Build bản phát hành
 
 ```powershell
-npx eas-cli build --platform android --profile test
+npx eas-cli build --platform ios --profile production
+npx eas-cli build --platform android --profile production
 ```
 
-## Build APK không cần Expo
-
-Đưa mã nguồn lên một kho GitHub riêng tư, mở tab **Actions**, chọn **Android APK thử**, bấm **Run workflow**. Khi xong, tải APK ở mục **Artifacts**. Bản này ký bằng khóa thử, chỉ dùng để cài thử, không đưa lên cửa hàng.
+Cả hai dùng biến môi trường nhóm **production** trên EAS. Android ra tệp .aab cho Google Play; tệp Firebase lấy từ biến kiểu File `GOOGLE_SERVICES_JSON` (xem `app.config.ts`). Các bước nộp lên cửa hàng nằm trong tài liệu "MeetLore: Hồ sơ phát hành App Store và Google Play".
 
 ## Không đưa vào mã nguồn
 

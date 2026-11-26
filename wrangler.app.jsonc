@@ -1,0 +1,11 @@
+// Cloudflare Worker cho app web tại app.meetlore.app (bản build của Expo, thư mục dist).
+// Build command: npm run build:web · Deploy command: npx wrangler deploy --config wrangler.app.jsonc
+{
+  "name": "dawn-sea-a91b",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist",
+    // App một trang: đường dẫn như /h/ho-guom hay /auth/forgot đều trả về index.html để app tự mở đúng màn hình.
+    "not_found_handling": "single-page-application"
+  }
+}

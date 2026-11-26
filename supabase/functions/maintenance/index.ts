@@ -15,12 +15,22 @@ Deno.serve(async (req) => {
     report.filesDeleted++;
   }
 
+  // Hồ sơ kẹt ở bước AI quá 15 phút (webhook lỗi, AI không trả lời): gọi lại hàm sơ duyệt.
+  // Hàm luôn chuyển hồ sơ sang Admin, kể cả khi AI không chạy được (chỉ dùng luật cố định).
+  const { data: stuck } = await db.from('identity_verifications').select('id').eq('status', 'ai_review').lt('submitted_at', new Date(Date.now() - 15 * 60000).toISOString()).limit(20);
+  for (const v of stuck ?? []) {
+    const r = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/verify-profile-ai`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-webhook-secret': Deno.env.get('WEBHOOK_SECRET') ?? '', authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` }, body: JSON.stringify({ record: { id: v.id } }) }).catch(() => null);
+    if (!r?.ok) report.errors.push(`ai_retry:${v.id}`);
+  }
+
   const { data: due } = await db.rpc('accounts_due_for_purge');
   for (const id of (due ?? []) as string[]) {
     const prep = await db.rpc('prepare_account_purge', { p_user: id });
     if (prep.error) { report.errors.push(`prepare:${id}`); continue; }
     const { data: objects } = await db.storage.from('verification').list(id);
     if (objects?.length) await db.storage.from('verification').remove(objects.map((o) => `${id}/${o.name}`));
+    const { data: photos } = await db.storage.from('avatars').list(id);
+    if (photos?.length) await db.storage.from('avatars').remove(photos.map((o) => `${id}/${o.name}`));
     const del = await db.auth.admin.deleteUser(id);
     if (del.error) { report.errors.push(`delete:${id}`); continue; }
     report.accountsDeleted++;

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps, type ViewStyle } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { c, f, space } from './theme';
@@ -30,8 +30,8 @@ export function Screen({ title, back, children, footer, wide, noPad }: { title?:
   const router = useRouter(); const insets = useSafeAreaInsets(); const { t, s: state, a } = useApp();
   const known: Record<string, Parameters<typeof t>[0]> = { budget_exhausted: 'rwOut', insufficient_points: 'rwLow', verification_required: 'vLocked', budget_above_cap: 'pdOver' };
   return (
-    <KeyboardAvoidingView style={s.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: 32, alignItems: 'center' }}>
+    <KeyboardAvoidingView style={[s.root, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingTop: 8, paddingBottom: (footer ? 24 : insets.bottom + 32), alignItems: 'center' }}>
         <View style={[s.col, wide && { maxWidth: 960 }, !noPad && { paddingHorizontal: space.l }]}>
           {back && <Pressable accessibilityRole="button" accessibilityLabel={t('back')} onPress={() => router.canGoBack() ? router.back() : router.replace('/hubs')} style={s.back}><Icon name="back" /><Text style={s.backText}>{t('back')}</Text></Pressable>}
           {title && <H1 style={{ marginBottom: space.m }}>{title}</H1>}
@@ -55,6 +55,12 @@ export const Gap = ({ h = space.l }: { h?: number }) => <View style={{ height: h
 export function Chip({ label, on, onPress, tone }: { label: string; on?: boolean; onPress?: () => void; tone?: 'son' | 'indigo' }) {
   const body = <Text style={[s.chipT, on && { color: c.white }]}>{label}</Text>; const bg = on ? (tone === 'son' ? c.son : c.indigo) : c.surface; const st = [s.chip, { backgroundColor: bg, borderColor: on ? bg : c.line }];
   return onPress ? <Pressable accessibilityRole="button" accessibilityState={{ selected: !!on }} onPress={onPress} style={st}>{body}</Pressable> : <View style={st}>{body}</View>;
+}
+/** Ảnh đại diện tròn; chưa có ảnh thì hiện chữ cái đầu của tên. */
+export function Avatar({ uri, name, size = 44 }: { uri?: string | null; name: string; size?: number }) {
+  const initials = name.trim().split(/\s+/).filter(Boolean).slice(-2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '·';
+  return uri ? <Image source={{ uri }} accessibilityIgnoresInvertColors style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: c.sunk }} />
+    : <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: c.indigoSoft, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontFamily: f.serifBold, fontSize: size * 0.38, color: c.indigo }}>{initials}</Text></View>;
 }
 export function Tag({ label, tone = 'indigo' }: { label: string; tone?: 'indigo' | 'son' | 'moss' | 'turmeric' | 'plain' }) {
   const m = { indigo: [c.indigoSoft, c.indigo], son: [c.sonSoft, c.son], moss: [c.mossSoft, c.moss], turmeric: [c.turmericSoft, c.turmeric], plain: [c.sunk, c.muted] }[tone];

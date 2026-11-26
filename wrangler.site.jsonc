@@ -1,0 +1,11 @@
+// Cloudflare Worker cho trang giới thiệu tại meetlore.app (trang tĩnh, thư mục site-dist).
+// Build command: npm run build:site · Deploy command: npx wrangler deploy --config wrangler.site.jsonc
+// Tệp _redirects (chuyển đường dẫn của app sang app.meetlore.app) và _headers trong site-dist được Cloudflare áp dụng.
+{
+  "name": "meetlore-site",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./site-dist",
+    "not_found_handling": "404-page"
+  }
+}

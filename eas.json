@@ -3,13 +3,6 @@
     "appVersionSource": "remote"
   },
   "build": {
-    "test": {
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk"
-      },
-      "environment": "preview"
-    },
     "testflight": {
       "distribution": "store",
       "environment": "preview",
@@ -17,13 +10,29 @@
     },
     "production": {
       "environment": "production",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   },
   "submit": {
-    "android": {
-      "buildType": "apk"
+    "testflight": {
+      "ios": {
+        "appleTeamId": "MF396VKW87",
+        "ascAppId": "6839131851"
+      }
     },
-    "production": {}
+    "production": {
+      "ios": {
+        "appleTeamId": "MF396VKW87",
+        "ascAppId": "6839131851"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "production",
+        "releaseStatus": "draft"
+      }
+    }
   }
 }

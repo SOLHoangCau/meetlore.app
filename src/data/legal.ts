@@ -14,7 +14,7 @@ export const LEGAL_REFERENCE_NOTE = 'This text is shown in English. A translatio
 const vi: Record<LegalDoc, Doc> = {
   terms: { title: 'Điều khoản sử dụng', body: `Khi tạo tài khoản, bạn đồng ý toàn bộ điều khoản này, Chính sách riêng tư, Quy tắc cộng đồng, Cam kết an toàn và Quy chế điểm. Nếu không đồng ý, vui lòng không sử dụng MeetLore.
 ### 1. Bên cung cấp
-MeetLore do Công ty Cổ phần Dịch vụ Trực tuyến Mosa (mã số thuế 0107945928, Số 28C phố Vạn Bảo, phường Ngọc Hà, TP Hà Nội) vận hành, phối hợp với SantaClaus Vietnam Foundation, sau đây gọi chung là "MeetLore". Liên hệ: hotro@meetlore.app.
+MeetLore do Công ty Cổ phần Dịch vụ Trực tuyến Mosa (mã số thuế 0107945928, Số 28C phố Vạn Bảo, phường Ngọc Hà, TP Hà Nội) vận hành, phối hợp với SantaClaus Vietnam Foundation, sau đây gọi chung là "MeetLore". Tên nhà phát hành trên App Store và Google Play: Santa Claus Vietnam Fdt & Mosa Online Service Joint Stock Company. Liên hệ: hotro@meetlore.app.
 ### 2. MeetLore là gì và không phải là gì
 MeetLore là công cụ giúp du khách và người bản địa tìm nhau để trao đổi tri thức, kỹ năng và ngôn ngữ miễn phí, gặp nhau tại các địa điểm công cộng gọi là Hub.
 MeetLore không là:
@@ -71,10 +71,11 @@ Tùy mức độ, MeetLore có thể cảnh báo, ẩn nội dung, tạm khóa c
 Điều khoản này theo pháp luật Việt Nam. Tranh chấp được thương lượng trước trong 30 ngày; không thành thì đưa ra Tòa án có thẩm quyền tại Việt Nam. Điều này không làm mất các quyền mà pháp luật bảo vệ người tiêu dùng dành cho bạn.
 ### 12. Ngôn ngữ
 Bản tiếng Việt là bản gốc. Bản tiếng Anh có giá trị tương đương; khi khác nhau, bản tiếng Việt được áp dụng. Bản dịch sang ngôn ngữ khác chỉ để tham khảo.` },
-  privacy: { title: 'Chính sách riêng tư', body: `MeetLore chỉ thu dữ liệu cần để kết nối an toàn, không bán dữ liệu và không dùng dữ liệu để quảng cáo. Bên kiểm soát dữ liệu: Công ty Cổ phần Dịch vụ Trực tuyến Mosa, phối hợp với SantaClaus Vietnam Foundation. Liên hệ về dữ liệu cá nhân: hotro@meetlore.app.
+  privacy: { title: 'Chính sách riêng tư', body: `MeetLore chỉ thu dữ liệu cần để kết nối an toàn, không bán dữ liệu và không dùng dữ liệu để quảng cáo. Bên kiểm soát dữ liệu: Công ty Cổ phần Dịch vụ Trực tuyến Mosa, phối hợp với SantaClaus Vietnam Foundation (nhà phát hành trên kho ứng dụng: Santa Claus Vietnam Fdt & Mosa Online Service Joint Stock Company). Liên hệ về dữ liệu cá nhân: hotro@meetlore.app.
 ### 1. Dữ liệu, mục đích và thời gian lưu
 - Email, mật khẩu đã mã hóa: để đăng nhập. Lưu đến khi xóa tài khoản.
 - Tên hiển thị, giới thiệu, nghề nghiệp, trình độ, ngôn ngữ, điều muốn cho đi và muốn nhận: để gợi ý kết nối. Người dùng đã duyệt được gợi ý thấy. Lưu đến khi xóa tài khoản.
+- Ảnh đại diện (không bắt buộc): để người khác nhận ra bạn khi gặp. Chỉ người đã đăng nhập xem được, qua liên kết hết hạn sau 1 ngày. Bạn gỡ được bất cứ lúc nào; xóa khi xóa tài khoản.
 - Ngày sinh, giới tính, quốc gia, tỉnh và phường nơi ở (không số nhà): để kiểm tra đủ 18 tuổi, lọc theo mong muốn gặp, thống kê. Chỉ Admin thấy. Lưu đến khi xóa tài khoản.
 - Kế hoạch chuyến đi: để gợi ý người cùng nơi, cùng thời gian. Chỉ bạn thấy; người khác chỉ thấy lý do gợi ý. Lưu đến khi bạn xóa.
 - Họ tên, quốc tịch, số điện thoại, loại giấy tờ, 4 số cuối, kết quả duyệt: để xác minh và xử lý sự cố an toàn. Chỉ người duyệt hồ sơ thấy. Lưu đến khi xóa tài khoản, cộng 12 tháng (chờ luật sư xác nhận).
@@ -96,9 +97,11 @@ Nếu bạn chọn tải ảnh, app che bằng khối đặc các phần số gi
 ### 4. Nhà cung cấp và chuyển dữ liệu ra nước ngoài
 - Supabase: cơ sở dữ liệu, đăng nhập, lưu ảnh. Xử lý tại Tokyo, Nhật Bản.
 - Expo, Apple, Google: gửi thông báo đẩy, chỉ gồm nội dung chung, không chứa tin nhắn. Xử lý tại Hoa Kỳ và nơi khác.
-- Dịch vụ gửi email (sẽ bổ sung khi chọn): mã đăng nhập, thông báo.
-- Vercel: máy chủ trang web. Xử lý tại Hoa Kỳ và nơi khác.
-Dịch tin nhắn và AI sơ duyệt hồ sơ đang tắt. Khi bật, MeetLore sẽ cập nhật chính sách và xin đồng ý riêng.
+- Anthropic (Claude): AI sơ duyệt hồ sơ xác minh như mô tả ở trên. Xử lý tại Hoa Kỳ.
+- Resend: gửi email mã xác minh và thông báo. Xử lý tại Hoa Kỳ.
+- Cloudflare: tên miền, trang web meetlore.app và chuyển tiếp email hỗ trợ. Xử lý tại Hoa Kỳ và nơi khác.
+- Goong: bản đồ trong app. Máy chủ bản đồ nhận địa chỉ IP và vùng bản đồ đang xem, không nhận tài khoản hay vị trí GPS của bạn. Xử lý tại Việt Nam.
+AI sơ duyệt hồ sơ xác minh: khi bạn gửi hồ sơ, máy chủ gửi thông tin khai báo (không gồm số điện thoại của bạn và người trợ giúp) cùng ảnh giấy tờ đã che và ảnh chân dung tới dịch vụ AI Claude của Anthropic để đối chiếu và gắn mức rủi ro. AI không duyệt hay từ chối ai; mọi quyết định do Admin là con người đưa ra. Theo điều khoản thương mại của Anthropic, dữ liệu gửi qua API không được dùng để huấn luyện mô hình và được xóa khỏi hệ thống của họ trong khoảng 30 ngày. Dịch tin nhắn đang tắt; khi bật, MeetLore sẽ cập nhật chính sách này.
 ### 5. Quyền của bạn
 Bạn có quyền được biết, đồng ý hoặc rút lại đồng ý, xem, sửa, nhận bản sao, hạn chế xử lý, phản đối xử lý và xóa dữ liệu, khiếu nại và yêu cầu bồi thường theo pháp luật. Hầu hết việc này làm được ngay trong mục Tôi → Quyền riêng tư; việc khác gửi về hotro@meetlore.app. Rút lại đồng ý xác minh hoặc xử lý tài khoản sẽ dừng các chức năng kết nối.
 ### 6. Bảo mật và sự cố
@@ -186,7 +189,7 @@ Tin nhắn bạn đã gửi sẽ không còn hiển thị với người nhận,
 const en: Record<LegalDoc, Doc> = {
   terms: { title: 'Terms of Use', body: `By creating an account you accept these Terms in full, together with the Privacy Policy, Community Rules, Safety Commitment and Points Rules. If you do not agree, please do not use MeetLore.
 ### 1. Provider
-MeetLore is operated by Mosa Online Service Joint Stock Company (tax code 0107945928, 28C Van Bao Street, Ngoc Ha Ward, Hanoi), in cooperation with SantaClaus Vietnam Foundation, together "MeetLore". Contact: hotro@meetlore.app.
+MeetLore is operated by Mosa Online Service Joint Stock Company (tax code 0107945928, 28C Van Bao Street, Ngoc Ha Ward, Hanoi), in cooperation with SantaClaus Vietnam Foundation, together "MeetLore". Publisher name on the App Store and Google Play: Santa Claus Vietnam Fdt & Mosa Online Service Joint Stock Company. Contact: hotro@meetlore.app.
 ### 2. What MeetLore is and is not
 MeetLore helps travelers and locals find each other to exchange knowledge, skills and languages free of charge, meeting at public places called Hubs.
 MeetLore is not:
@@ -243,10 +246,11 @@ Depending on severity, MeetLore may warn, hide content, restrict features, suspe
 These Terms are governed by Vietnamese law. Disputes are first negotiated for 30 days, then brought before a competent Vietnamese court. This does not remove any consumer rights the law gives you.
 ### 12. Language
 The Vietnamese version is the original. The English version has equivalent effect; if they differ, the Vietnamese version prevails. Translations into other languages are for reference only.` },
-  privacy: { title: 'Privacy Policy', body: `MeetLore collects only the data needed for safe connections, never sells data and does not use it for advertising. Data controller: Mosa Online Service Joint Stock Company, in cooperation with SantaClaus Vietnam Foundation. Personal data contact: hotro@meetlore.app.
+  privacy: { title: 'Privacy Policy', body: `MeetLore collects only the data needed for safe connections, never sells data and does not use it for advertising. Data controller: Mosa Online Service Joint Stock Company, in cooperation with SantaClaus Vietnam Foundation (app store publisher: Santa Claus Vietnam Fdt & Mosa Online Service Joint Stock Company). Personal data contact: hotro@meetlore.app.
 ### 1. Data, purposes and retention
 - Email and hashed password: to sign in. Kept until account deletion.
 - Display name, introduction, occupation, education, languages, what you offer and want to learn: to suggest connections. Visible to approved users you are matched with. Kept until account deletion.
+- Profile photo (optional): so others can recognise you when you meet. Only signed-in members can see it, through links that expire after 1 day. You can remove it at any time; deleted with your account.
 - Birth date, gender, country, province and ward of residence (no street address): to check age 18+, apply meeting preferences and produce statistics. Admins only. Kept until account deletion.
 - Trip plans: to suggest people in the same place at the same time. Visible only to you; others see only the reason for a suggestion. Kept until you delete them.
 - Legal name, nationality, phone, document type, last 4 characters, review outcome: for verification and safety incidents. Reviewers only. Kept until account deletion plus 12 months (pending legal confirmation).
@@ -268,9 +272,11 @@ If you choose to upload a photo, the app covers with solid blocks the document n
 ### 4. Providers and transfers abroad
 - Supabase: database, sign-in, photo storage. Processed in Tokyo, Japan.
 - Expo, Apple, Google: push notifications containing only generic text, never message content. Processed in the United States and elsewhere.
-- Email delivery provider (to be added when selected): sign-in codes and notices.
-- Vercel: website hosting. Processed in the United States and elsewhere.
-Message translation and AI pre-screening are switched off. If enabled, MeetLore will update this policy and ask for separate consent.
+- Anthropic (Claude): AI pre-screening of verification as described above. Processed in the United States.
+- Resend: sending verification codes and notices by email. Processed in the United States.
+- Cloudflare: domain, the meetlore.app website and forwarding of support email. Processed in the United States and elsewhere.
+- Goong: maps in the app. The map server receives your IP address and the map area you view, not your account or GPS location. Processed in Vietnam.
+AI pre-screening of verification: when you submit verification, our server sends your declared details (without your or your helper’s phone numbers) together with your covered ID photo and portrait to Anthropic’s Claude AI service to cross-check them and assign a risk level. The AI does not approve or reject anyone; every decision is made by a human Admin. Under Anthropic’s commercial terms, data sent through its API is not used to train models and is deleted from its systems within about 30 days. Message translation is switched off; if enabled, MeetLore will update this policy.
 ### 5. Your rights
 You have the right to be informed, to consent or withdraw consent, to access, correct and receive a copy of your data, to restrict or object to processing, to have data deleted, and to complain and claim compensation under the law. Most of this is available in Me → Privacy; other requests go to hotro@meetlore.app. Withdrawing consent to verification or account processing stops connection features.
 ### 6. Security and incidents

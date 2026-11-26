@@ -2,7 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { HUBS, TOPICS, type HubSeed } from '../data/catalog';
 import { DEMO_DEMAND, DEMO_KNOWLEDGE, DEMO_OFFERS, DEMO_QUEUE, PEOPLE, type DemoPerson } from '../data/demo';
-import { contentLocale, translate, type Key, type Locale, type UiLocale } from '../i18n';
+import { contentLocale, translate, UI_LOCALES, type Key, type Locale, type UiLocale } from '../i18n';
+const LOCALE_KEY = 'meetlore.locale.v1';
 import './locales';
 import { rankMatches, type Match, type MatchProfile, type MeetMode, type Depth, type LanguageLevel } from '../../supabase/functions/_shared/matching';
 import { calcPoints, MAX_POINTS_PER_MONTH, partnerBudgetCap, pointValueVnd, sessionValue, voucherQuote, type PointsInput, type WageRegion } from '../../supabase/functions/_shared/points';
@@ -19,6 +20,8 @@ export type Profile = {
   displayName: string; birthYear: number | null; homeCountry: string; homeProvince: string; homeWard: string; gender: string | null; meetSame: boolean; headline: string;
   capabilities: { kind: string; title: string; years?: number; credential?: string }[]; languages: Lang[]; answers: number[]; depth: Depth;
   gives: string[]; wants: Record<string, 1 | 3>; wantLanguages: string[]; localHubs: string[]; trips: Trip[]; helpers: Helper[];
+  /** Liên kết có hạn tới ảnh đại diện, hoặc null. */
+  avatar?: string | null;
 };
 export type Verification = { id?: string; method?: 'photo' | 'in_person'; inPersonCode?: string | null; status: 'ai_review' | 'awaiting_in_person' | 'awaiting_admin' | 'approved' | 'rejected' | 'needs_info'; legalName: string; city: string; docType: string; submittedAt: number; risk: 'low' | 'medium' | 'high'; score: number; summary: string; flags: string[]; note?: string };
 export type Conversation = { id: string; personId: string; hub: string | null; messages: { id: string; from: 'me' | 'them'; text: string; translated?: string }[] };
@@ -56,7 +59,7 @@ const demoMetrics: Metric[] = [
   { at: Date.now() - 9 * 86400000, type: 'session_confirmed', hub: 'sa-pa', people: 4, minutes: 90, points: 300, ref: 339366, cons: 169683, bill: 0, discount: 0 },
   { at: Date.now() - 5 * 86400000, type: 'reward_redeemed', hub: 'ho-guom', people: 1, minutes: 0, points: 7, ref: 10094, cons: 10000, bill: 200000, discount: 10000 },
 ];
-const initial: State = { locale: 'vi', uiLocale: 'vi', roles: isDemo ? ['admin'] : [], flags: { invite_required: !isDemo, verification_photo: true, verification_in_person: true, points_redemption: true, message_translation: false, daily_figure: isDemo }, hasAccess: isDemo, capacity: { used: 0, max: 500 }, notices: [], deletionAt: null, previewCount: null, pushOn: false, safetyAck: false, userId: null, email: null, onboarded: false, isAdmin: isDemo, profile: emptyProfile, verification: null, sentIntents: [], incoming: PEOPLE.filter((p) => p.invitesMe).map((p) => ({ personId: p.id, hub: p.presence[0]?.hub ?? null })), declined: [], blocked: [], conversations: [], meetups: [], knowledge: DEMO_KNOWLEDGE as KnowledgeItem[], ledger: [], presence: null, applications: [], queueDone: {}, clockHours: 0, reports: [], hubRequests: [], alertsOn: false, allowTranslate: false, extraHubs: [], hidden: false, sessions: demoSessions, invitationAnswers: {}, vouchers: [], offers: DEMO_OFFERS.map((o) => ({ ...o, used: 0 })), myPartner: null, fund: { balance: 0, monthIn: 0, monthOut: 0 }, metrics: demoMetrics, costs: [], maxAlerts: 1, operatorHubs: [], hubEdits: {}, people: PEOPLE, remoteHubs: [], remoteMatches: [], remoteDemand: [], remoteQueue: [], remoteBalance: null, lastError: null };
+const initial: State = { locale: 'vi', uiLocale: 'vi', roles: isDemo ? ['admin'] : [], flags: { invite_required: !isDemo, verification_photo: true, verification_in_person: false, points_redemption: true, message_translation: false, daily_figure: isDemo }, hasAccess: isDemo, capacity: { used: 0, max: 500 }, notices: [], deletionAt: null, previewCount: null, pushOn: false, safetyAck: false, userId: null, email: null, onboarded: false, isAdmin: isDemo, profile: emptyProfile, verification: null, sentIntents: [], incoming: PEOPLE.filter((p) => p.invitesMe).map((p) => ({ personId: p.id, hub: p.presence[0]?.hub ?? null })), declined: [], blocked: [], conversations: [], meetups: [], knowledge: DEMO_KNOWLEDGE as KnowledgeItem[], ledger: [], presence: null, applications: [], queueDone: {}, clockHours: 0, reports: [], hubRequests: [], alertsOn: false, allowTranslate: false, extraHubs: [], hidden: false, sessions: demoSessions, invitationAnswers: {}, vouchers: [], offers: DEMO_OFFERS.map((o) => ({ ...o, used: 0 })), myPartner: null, fund: { balance: 0, monthIn: 0, monthOut: 0 }, metrics: demoMetrics, costs: [], maxAlerts: 1, operatorHubs: [], hubEdits: {}, people: PEOPLE, remoteHubs: [], remoteMatches: [], remoteDemand: [], remoteQueue: [], remoteBalance: null, lastError: null };
 const KEY = 'trigiao.demo.v4';
 const uid = () => Math.random().toString(36).slice(2, 10);
 const today = () => new Date().toISOString().slice(0, 10);
@@ -114,7 +117,7 @@ function useActions(s: State, set: (f: (x: State) => State) => void, refresh: ()
     syncMessages: () => { if (!isDemo && s.userId) syncMessages().catch(() => {}); },
     setHidden: (hidden: boolean) => { patch({ hidden }); if (!isDemo && s.userId) live.setDiscoverable(s.userId, !hidden).catch(fail); },
     translate: async (cid: string, messageId: string) => { const text = await live.translateMessage(messageId, s.locale); set((o) => ({ ...o, conversations: o.conversations.map((c) => c.id === cid ? { ...c, messages: c.messages.map((m) => m.id === messageId ? { ...m, translated: text } : m) } : c) })); },
-    setLanguage: (code: UiLocale) => { patch({ uiLocale: code, locale: contentLocale(code) }); if (!isDemo && s.userId) live.setUiLocale(s.userId, code).catch(() => {}); },
+    setLanguage: (code: UiLocale) => { patch({ uiLocale: code, locale: contentLocale(code) }); AsyncStorage.setItem(LOCALE_KEY, code).catch(() => {}); if (!isDemo && s.userId) live.setUiLocale(s.userId, code).catch(() => {}); },
     redeemCode: async (code: string) => { if (isDemo) { patch({ hasAccess: true }); return; } await live.rpcCall('redeem_access_code', { p_code: code.trim().toUpperCase() }); await refresh(); },
     createCodes: async (n: number, uses: number, note: string): Promise<string[]> => isDemo ? Array.from({ length: n }, () => uid().toUpperCase()) : live.rpcCall<string[]>('create_access_codes', { p_count: n, p_uses: uses, p_note: note || null }),
     verifyInPerson: async (code: string, hub: string, docType: string, last4: string, nameOk: boolean, faceOk: boolean): Promise<string> => {
@@ -135,6 +138,10 @@ function useActions(s: State, set: (f: (x: State) => State) => void, refresh: ()
       set((o) => ({ ...o, hubEdits: { ...o.hubEdits, [slug]: { ...(o.hubEdits[slug] ?? {}), ...x } } }));
     },
     saveProfile: () => { if (!isDemo) remote(() => live.pushProfile(s.profile, hubId)); },
+    /** Lưu hồ sơ ngay và chờ kết quả, dùng cho nút Tiếp ở từng bước. Lỗi được ném ra để màn hình hiện. */
+    /** Tải ảnh đại diện (đã cắt vuông ở máy), hoặc gỡ khi uri là null. */
+    setAvatar: async (uri: string | null) => { if (isDemo) { patch({ profile: { ...s.profile, avatar: uri } }); return; } if (uri) await live.uploadAvatar(uri); else await live.removeAvatar(); await refresh(); },
+    saveProfileNow: async () => { if (isDemo) return; await live.pushProfile(s.profile, hubId); await refresh(); },
     startDemo: () => set((o) => ({ ...o, email: 'demo@meetlore.app', onboarded: true, profile: { ...emptyProfile, displayName: 'Minh An', birthYear: 1996, homeProvince: 'Hà Nội', homeWard: 'Hoàn Kiếm', headline: 'Thiết kế sản phẩm, thích chữ cổ và cà phê', capabilities: [{ kind: 'occupation', title: 'Lập trình viên', years: 6, credential: 'master' }], languages: [{ code: 'vi', level: 'native', canHelpPractice: true }, { code: 'en', level: 'fluent', canHelpPractice: true }, { code: 'ko', level: 'learning', canHelpPractice: false }], gives: ['programming', 'marketing', 'design', 'photography', 'vietnamese-language'], wants: { 'han-nom': 3, 'indigo-dyeing': 3, ceramics: 1 }, wantLanguages: ['ko'], localHubs: ['van-mieu', 'ho-guom'], trips: [{ hub: 'cat-cat', country: 'VN', city: 'Sa Pa', from: inDays(3), to: inDays(8), purpose: 'Tìm hiểu nghề nhuộm chàm' }, { hub: null, country: 'VN', city: 'Huế', from: inDays(30), to: inDays(34), purpose: 'Học về di sản' }], helpers: [{ name: 'Trần Thị Bình', relation: 'family', phone: '+84900000099', informed: true }] }, verification: { status: 'approved', legalName: 'Nguyễn Minh An', city: 'Hà Nội', docType: 'national_id', submittedAt: Date.now() - 86400000 * 2, risk: 'low', score: 6, summary: 'Thông tin đầy đủ.', flags: [] } })),
     submitVerification: (input: VerificationInput, form?: VerificationForm) => {
       const rules = ruleChecks(input, new Date().getFullYear());
@@ -234,6 +241,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isDemo) { AsyncStorage.getItem(KEY).then((v) => { if (v) setS({ ...initial, ...JSON.parse(v), lastError: null }); }).catch(() => {}).finally(() => { loaded.current = true; setReady(true); }); return; }
     setS((o) => ({ ...o, knowledge: [], sessions: [], offers: [], people: [], incoming: [], metrics: [] }));
+    AsyncStorage.getItem(LOCALE_KEY).then((v) => { if (v && (UI_LOCALES as string[]).includes(v)) setS((o) => (o.userId ? o : { ...o, uiLocale: v as UiLocale, locale: contentLocale(v as UiLocale) })); }).catch(() => {});
     refresh().catch(() => {}).finally(() => { loaded.current = true; setReady(true); });
   }, [refresh]);
   useEffect(() => { if (isDemo && loaded.current) AsyncStorage.setItem(KEY, JSON.stringify(s)).catch(() => {}); }, [s]);

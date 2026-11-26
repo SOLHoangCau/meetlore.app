@@ -10,3 +10,7 @@ dist
 *.p12
 *.mobileprovision
 credentials.json
+site-dist/
+google-services.json
+GoogleService-Info.plist
+google-play-service-account.json

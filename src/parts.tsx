@@ -5,7 +5,7 @@ import { LiveMap } from './components/LiveMap';
 import { GOONG_KEY } from './lib/maps';
 import { topicName, useApp, type Session } from './lib/store';
 import { c, space } from './theme';
-import { Banner, Btn, Card, Gap, H2, P, Row, Small, Tag, Wrap } from './ui';
+import { Avatar, Banner, Btn, Card, Gap, H2, P, Row, Small, Tag, Wrap } from './ui';
 import type { Match, MatchReason } from '../supabase/functions/_shared/matching';
 
 export const langName = (code: string) => LANGUAGES.find((l) => l.code === code)?.native ?? code;
@@ -42,7 +42,7 @@ export function reasonText(reason: MatchReason, app: ReturnType<typeof useApp>) 
 export const LM = { practice: ['lmPractice', 'son'], direct: ['lmDirect', 'moss'], translate: ['lmTranslate', 'indigo'] } as const;
 export function MatchCard({ m }: { m: Match }) {
   const app = useApp(); const { t, s, a } = app; const r = useRouter(); const p = app.people.find((x) => x.id === m.candidateId); if (!p) return null; const conv = s.conversations.find((c2) => c2.personId === p.id); const sent = s.sentIntents.includes(p.id); const lm = LM[m.languageMode];
-  return <Card onPress={() => r.push(`/people/${p.id}`)}><Row style={{ justifyContent: 'space-between', marginBottom: 4 }}><H2>{p.name}</H2><Tag tone={lm[1]} label={t(lm[0])} /></Row><P muted>{s.locale === 'en' ? p.headlineEn : p.headline}</P><Gap h={8} />{m.reasons.slice(0, 3).map((x, i) => <Small key={i} style={{ color: c.ink }}>• {reasonText(x, app)}</Small>)}<Gap h={12} />{conv ? <Btn kind="secondary" label={t('openChat')} onPress={() => r.push(`/messages/${conv.id}`)} /> : <Btn disabled={sent} label={sent ? t('sent') : t('connect')} onPress={() => a.sendIntent(p.id, m.hubId)} />}</Card>;
+  return <Card onPress={() => r.push(`/people/${p.id}`)}><Row style={{ alignItems: 'center', gap: 12, marginBottom: 4 }}><Avatar uri={p.avatar} name={p.name} /><View style={{ flex: 1, alignItems: 'flex-start' }}><H2>{p.name}</H2><Tag tone={lm[1]} label={t(lm[0])} /></View></Row><P muted>{s.locale === 'en' ? p.headlineEn : p.headline}</P><Gap h={8} />{m.reasons.slice(0, 3).map((x, i) => <Small key={i} style={{ color: c.ink }}>• {reasonText(x, app)}</Small>)}<Gap h={12} />{conv ? <Btn kind="secondary" label={t('openChat')} onPress={() => r.push(`/messages/${conv.id}`)} /> : <Btn disabled={sent} label={sent ? t('sent') : t('connect')} onPress={() => a.sendIntent(p.id, m.hubId)} />}</Card>;
 }
 export function SafetyPanel({ plan }: { plan?: string }) {
   const { t, s } = useApp(); const helper = s.profile.helpers[0];

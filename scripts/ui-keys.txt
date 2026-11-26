@@ -530,3 +530,11 @@ lockPrompt
 sessionExpired
 dirOpen
 dirTitle
+profileSaved
+profileSavedB
+saving
+birthSaved
+avatarAdd
+avatarChange
+avatarRemove
+avatarRule

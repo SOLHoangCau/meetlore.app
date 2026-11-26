@@ -4,7 +4,7 @@
 
 ## 1. Bên đứng tên
 
-Công ty Cổ phần Dịch vụ Trực tuyến Mosa, mã số thuế 0107945928, Số 28C phố Vạn Bảo, phường Ngọc Hà, TP Hà Nội, phối hợp với SantaClaus Vietnam Foundation. Email về dữ liệu cá nhân: hotro@meetlore.app (cần tên miền meetlore.app và hộp thư chạy thật trước khi gửi duyệt cửa hàng).
+Công ty Cổ phần Dịch vụ Trực tuyến Mosa, mã số thuế 0107945928, Số 28C phố Vạn Bảo, phường Ngọc Hà, TP Hà Nội, phối hợp với SantaClaus Vietnam Foundation. Tên nhà phát hành trên App Store và Google Play: Santa Claus Vietnam Fdt & Mosa Online Service Joint Stock Company (Apple Team ID MF396VKW87). Email về dữ liệu cá nhân: hotro@meetlore.app (cần tên miền meetlore.app và hộp thư chạy thật trước khi gửi duyệt cửa hàng).
 
 ## 2. Ba tài khoản quản trị
 
@@ -76,12 +76,16 @@ Không có AI sơ duyệt, nên mọi hồ sơ mặc định chờ 48 giờ. Ng�
 - Phiên tự giữ **180 ngày** kể từ lần xác thực gần nhất. Hết hạn thì app đăng xuất trên thiết bị đó và hỏi lại mật khẩu.
 - Tùy chọn **Khóa app bằng Face ID, vân tay hoặc mã máy** (Tôi → Quyền riêng tư). Khi bật, app hỏi lúc mở và khi quay lại sau 5 phút ở nền; mỗi lần mở khóa thành công tính là một lần xác thực, nên phiên không bị cắt ở mốc 180 ngày.
 - Mã 6 số qua email chỉ dùng khi đăng ký, đặt lại mật khẩu và lần đầu đăng nhập trên một thiết bị mới.
-- Tự điền mật khẩu (iCloud Keychain, Google Password Manager): cần tệp `public/.well-known/apple-app-site-association` và `assetlinks.json` trên meetlore.app. Thay `THAY_BANG_TEAM_ID` bằng Apple Team ID; trong assetlinks.json thay hai dấu vân tay SHA-256: khóa ký của Google Play (Play Console → App integrity) và khóa upload (EAS → Credentials). Tệp `public/_headers` cho Cloudflare Pages trả hai tệp này dạng JSON. Hai tệp này không chứa bí mật.
+- Tự điền mật khẩu (iCloud Keychain, Google Password Manager): cần tệp `public/.well-known/apple-app-site-association` và `assetlinks.json` trên meetlore.app. Team ID `MF396VKW87` đã điền trong tệp Apple; trong assetlinks.json thay hai dấu vân tay SHA-256: khóa ký của Google Play (Play Console → App integrity) và khóa upload (EAS → Credentials). Tệp `public/_headers` cho Cloudflare Pages trả hai tệp này dạng JSON. Hai tệp này không chứa bí mật.
 - Đăng xuất chỉ thoát thiết bị đang dùng, không thoát các thiết bị khác.
 
 ## 10. Tên miền, bản đồ, nhân vật hôm nay
 
-- **Tên miền**: mua meetlore.app (chính) và meetlore.org qua Cloudflare Registrar. Web chạy trên Cloudflare Pages (gói miễn phí): build `npx expo export --platform web`, thư mục `dist`. meetlore.org chuyển hướng 301 về meetlore.app bằng Redirect Rule. Hộp thư hotro@meetlore.app dùng Cloudflare Email Routing chuyển về hộp thư có sẵn; gửi email tự động của Supabase cần SMTP riêng.
+- **Tên miền**: mua meetlore.app (chính) và meetlore.org qua Cloudflare Registrar. Hai Cloudflare Worker (gói miễn phí) cùng nối repo SOLHoangCau/meetlore.app, biến build `NODE_VERSION=22`. Lệnh deploy: `npx wrangler deploy --config wrangler.site.jsonc` cho trang giới thiệu, `npx wrangler deploy --config wrangler.app.jsonc` cho app web:
+  - **meetlore.app** (trang giới thiệu, Hub, Cộng đồng, Đối tác, Liên hệ, văn bản pháp lý vi/en): build `npm run build:site`, thư mục `site-dist`. Thêm `EXPO_PUBLIC_SUPABASE_URL` để trang Cộng đồng hiện ảnh nhân vật. Tệp `.well-known` và `_redirects` nằm ở đây; các đường dẫn của app (/h, /k, /invite, /auth, /partner…) chuyển sang app.meetlore.app.
+  - **app.meetlore.app** (bản web của app): build `npm run build:web`, thư mục `dist`, ba biến `EXPO_PUBLIC_…`.
+  Supabase → Authentication → URL Configuration: thêm `https://app.meetlore.app/**` vào Redirect URLs.
+  Privacy Policy URL cho Apple và Google: `https://meetlore.app/privacy`; Support URL: `https://meetlore.app/contact`; trang xóa tài khoản cho Google Play: `https://meetlore.app/delete-account`. meetlore.org chuyển hướng 301 về meetlore.app bằng Redirect Rule. Hộp thư hotro@meetlore.app dùng Cloudflare Email Routing chuyển về hộp thư có sẵn; gửi email tự động của Supabase cần SMTP riêng.
 - **Tên Hub**: "TriGiao Hub – <địa danh>". TriGiao Hub là điểm gặp của MeetLore tại Việt Nam; trang Hub có dòng giải thích này.
 - **Bản đồ Goong**: tạo 2 khóa trên account.goong.io, ví dụ `meetlore-maptiles` (Maptiles key, cho bản đồ) và `meetlore-api` (API key, chưa dùng). Giới hạn khóa theo tên miền meetlore.app và theo app `app.meetlore`. Gói miễn phí của Goong giới hạn khoảng 1.000 lượt tải bản đồ mỗi tháng; theo dõi trong trang Thống kê của Goong. Nút **Chỉ đường** mở Google Maps (iPhone hỏi Apple Maps hay Google Maps), không tốn khóa.
 - **Nhân vật hôm nay**: dữ liệu trong bảng `daily_figures`, mặc định **tắt**. Admin 1 bật từ ngày 01/12 trong Khu quản trị → Nhân vật hôm nay. Cập nhật bằng CSV (mẫu: `supabase/daily-figures.csv`, hoặc nút Tải tệp mẫu trong app); có thể nhập thẳng bằng Supabase Table Editor → Import data from CSV. App lấy dữ liệu mới trong vòng 12 giờ; mất mạng thì dùng bản lưu trên máy hoặc bản đi kèm app.

@@ -1,6 +1,6 @@
 import type { Depth, LanguageLevel } from '../../supabase/functions/_shared/matching';
 export type DemoPerson = {
-  id: string; name: string; headline: string; headlineEn: string; background: string[];
+  id: string; name: string; avatar?: string; headline: string; headlineEn: string; background: string[];
   languages: { code: string; level: LanguageLevel; canHelpPractice?: boolean }[];
   gives: string[]; wants: string[]; wantsLanguages?: string[]; depth: Depth; orientation: number; gender: string;
   presence: { hub: string; role: 'local' | 'traveler'; from?: string; to?: string; weekdays?: number[] }[];

@@ -73,7 +73,7 @@ export function DailyFigure() {
       {url && !bad ? <Image source={{ uri: url }} onError={() => setBad(true)} accessibilityLabel={fig.name} resizeMode="cover" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
         : <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontFamily: f.serifBold, fontSize: 64, color: c.indigo, opacity: 0.85 }}>{initials}</Text></View>}
       <View style={{ position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(255,253,248,0.92)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-        <Text style={{ fontFamily: f.medium, fontSize: 13, color: c.ink }}>{t('dfGuess')}: <Text style={{ fontFamily: f.serifBold, fontSize: 15 }}>{quiz.prefix}__</Text></Text></View>
+        <Text style={{ fontFamily: f.medium, fontSize: 13, color: c.ink }}>{t('dfGuess')}: <Text style={{ fontFamily: f.serifBold, fontSize: 15 }}>{quiz.prefix}{play ? <Text style={{ color: c.moss }}>{quiz.answer}</Text> : '__'}</Text></Text></View>
       {box.w > 0 && quiz.options.map((o, i) => <Bubble key={o} i={i} w={box.w} h={box.h} label={o} still={!!play || reduce} onPress={() => pick(o)} a11y={`${quiz.prefix}${o}`}
         tone={play && o === quiz.answer ? 'right' : play?.pick === o ? 'wrong' : 'plain'} />)}
     </View>
